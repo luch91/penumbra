@@ -1,4 +1,13 @@
 # Dev / test toolchain for the Penumbra contracts.
+#
+# REQUIRES PYTHON 3.12+  (genlayer-test ships no installable build for older
+# Pythons — pip will "ignore" every modern version and fail if you're on 3.11
+# or earlier). Create a clean env first:
+#
+#   conda create -n genlayer python=3.12 -y
+#   conda activate genlayer
+#   pip install -r requirements-dev.txt
+#
 # The contracts themselves have NO dependencies — they are single-file GenVM
 # programs whose only import is `from genlayer import *`, provided by the runner.
-genlayer-test>=0.5
+genlayer-test
