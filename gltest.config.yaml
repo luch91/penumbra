@@ -1,0 +1,17 @@
+# GenLayer test-suite configuration.
+# Docs: https://pypi.org/project/genlayer-test/
+#
+# Run against the Studio localnet (needs an LLM provider configured) or studionet:
+#   gltest --network localnet
+#   gltest --network studionet
+#
+# The intelligent-contract tests call live models, so point at a network that
+# actually has validators + LLMs. Pure offline unit runs only cover the
+# deterministic guards (preconditions, dedupe, ledger math).
+
+networks:
+  default: localnet
+
+paths:
+  contracts: contracts
+  artifacts: artifacts

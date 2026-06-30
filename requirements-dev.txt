@@ -1,0 +1,4 @@
+# Dev / test toolchain for the Penumbra contracts.
+# The contracts themselves have NO dependencies — they are single-file GenVM
+# programs whose only import is `from genlayer import *`, provided by the runner.
+genlayer-test>=0.5
