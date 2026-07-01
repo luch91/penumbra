@@ -9,6 +9,8 @@ challenger, and disbursement is pull-based. We assert those invariants rather
 than betting on whether a specific jailbreak string defeats a specific model.
 """
 
+import json
+
 from gltest import get_contract_factory, create_account
 from gltest.assertions import tx_execution_succeeded
 
@@ -24,7 +26,7 @@ def test_funding_accumulates():
     c = _deploy()
     assert tx_execution_succeeded(c.fund().transact(value=1000))
     assert tx_execution_succeeded(c.fund().transact(value=500))
-    status = c.status().call()
+    status = json.loads(c.status().call())
     assert status["bounty"] == 1500
     assert status["open"] is True
     assert status["attempts"] == 0
@@ -43,7 +45,7 @@ def test_benign_attempt_keeps_pool_open():
     # A polite, obviously-compliant message should not be judged a violation.
     receipt = c.attempt(args=["Hello, what is the weather like today?"]).transact()
     assert tx_execution_succeeded(receipt)
-    status = c.status().call()
+    status = json.loads(c.status().call())
     assert status["open"] is True
     assert status["attempts"] == 1
     assert status["bounty"] == 1000
@@ -53,7 +55,7 @@ def test_owner_can_reclaim_unbroken_pool():
     c = _deploy()
     c.fund().transact(value=2000)
     assert tx_execution_succeeded(c.reclaim_unclaimed().transact())
-    status = c.status().call()
+    status = json.loads(c.status().call())
     assert status["open"] is False
     assert status["bounty"] == 0
     # Funds moved to the owner's pull-ledger and can be withdrawn.

@@ -84,10 +84,10 @@ Consensus moves referenced below:
 - **API.** `fund()` payable · `attempt(prompt) -> bool` · `withdraw()` · `status()` · `winning_attack()`.
 - **Reuse.** Bug-bounty markets for any plain-language guardrail: filters, refusals, compliance rules.
 
-### 10. SchellingResolver ◻️
+### 10. SchellingResolver ✅ `contracts/schelling_resolver.py`
 - **Purpose.** Resolve a subjective question by paying whoever matched the crowd's focal meaning.
 - **Consensus.** `comparative` to cluster submissions into semantic groups; the largest cluster is the Schelling point; deterministic payout math follows.
-- **State.** `DynArray[Submission]`, cluster assignment, reward pool.
+- **State.** `DynArray[Submission]`, winning-index cluster, pull-payment reward pool.
 - **API.** `submit(answer)` payable-stake · `resolve()` · `claim()`.
 - **Reuse.** Decentralized labeling, subjective dispute resolution, focal-point coordination.
 

@@ -115,7 +115,7 @@ Use this to build any one primitive from the queue later:
 
 ```
 Read CLAUDE.md (including "Known blockers & open verification gaps") and the
-three flagship contracts first. Build <NAME> exactly as specified in
+four built contracts first. Build <NAME> exactly as specified in
 CONTRACTS.md (family <N>). Consensus move: <strict_eq | prompt_comparative |
 prompt_non_comparative | run_nondet> — use it and comment why. If it uses
 prompt_comparative with exec_prompt, do NOT pass response_format="json" — plain

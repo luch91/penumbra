@@ -11,6 +11,8 @@ SHAPE and INVARIANTS of the result, never an exact string. That is the correct
 way to test an intelligent contract: pin the contract's guarantees, not the LLM.
 """
 
+import json
+
 from gltest import get_contract_factory, create_account
 from gltest.assertions import tx_execution_succeeded
 
@@ -30,7 +32,7 @@ def test_clearcut_question_has_low_dissensus():
     receipt = c.resolve(args=["Is water wet under normal conditions?"]).transact()
     assert tx_execution_succeeded(receipt)
 
-    rec = c.latest_verdict().call()
+    rec = json.loads(c.latest_verdict().call())
     # A clear-cut question should land near-unanimous: dissensus well below half.
     assert rec["dissensus_milli"] < 400
     assert rec["sample_size"] >= 3
@@ -45,12 +47,12 @@ def test_record_archive_grows_and_is_indexable():
     )
     assert c.count().call() == 2
 
-    first = c.get(args=[0]).call()
+    first = json.loads(c.get(args=[0]).call())
     assert "prime" in first["question"].lower()
 
     # A subjective taste question should be measurably more contested than a fact.
-    fact = c.get(args=[0]).call()
-    taste = c.get(args=[1]).call()
+    fact = json.loads(c.get(args=[0]).call())
+    taste = json.loads(c.get(args=[1]).call())
     assert taste["dissensus_milli"] >= fact["dissensus_milli"]
 
 

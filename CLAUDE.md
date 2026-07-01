@@ -10,7 +10,7 @@ Penumbra is a library of **GenLayer Intelligent Contract primitives** — reusab
 
 Each contract is a standalone `.py` file in `contracts/`, deployable as-is to GenLayer Studio. There is **no package, no shared import at deploy time** — `lib/penumbra_consensus.py` is a copy-paste reference, and each contract inlines the few helpers it needs.
 
-Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the three built flagships as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`.
+Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the four built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`.
 
 ---
 
@@ -81,7 +81,16 @@ def require(cond, msg):
 Any uncaught exception fails the transaction and rolls back.
 
 ### Addresses
-`Address("0x...")` to construct; `.as_hex`, `.as_bytes`, `.as_int`. Accept user-supplied addresses as `str` and wrap with `Address(...)`. **`Address.ZERO` is declared in the SDK source but was `AttributeError` on the pinned runner in testing — do not rely on it.** For a zero/null address, construct explicitly: `Address("0x0000000000000000000000000000000000000000")`.
+`Address("0x...")` to construct; `.as_hex`, `.as_bytes`, `.as_int`. **`Address.ZERO` is declared in the SDK source but was `AttributeError` on the pinned runner in testing — do not rely on it.** For a zero/null address, construct explicitly: `Address("0x0000000000000000000000000000000000000000")`.
+
+**Accepting an address parameter: do NOT blindly `str`-then-`Address(...)`.** Confirmed by testing: when a caller (at minimum, `genlayer-cli`'s `--args`) passes a hex-address-shaped argument, GenVM decodes it into a native `Address` object on arrival regardless of the Python parameter's `str` type hint. Calling `Address(who)` on an already-`Address` value then crashes (`TypeError: cannot convert 'Address' object to bytes`) — this runner's bundled `Address.__init__` lacks the `isinstance(val, Address)` early-return that the SDK's GitHub `main` branch has. Type the parameter as `Address` and handle both cases defensively:
+```python
+@gl.public.view
+def claimable_of(self, who: Address) -> int:
+    addr = who if isinstance(who, Address) else Address(who)
+    return int(self.claimable.get(addr, u256(0)))
+```
+Found and fixed in both `SchellingResolver.claimable_of` and `JailbreakBounty.claimable_of`. Audit any other method taking an address argument for the same pattern.
 
 ---
 
@@ -152,18 +161,19 @@ Rules:
 
 ## Known blockers & open verification gaps
 
-Everything below was found by live-deploying the three flagships to studionet via the CLI in a real smoke-test session — not just `python3 -m py_compile`. Read this before assuming an untested pattern "should" work; the SDK docs and this file's own prior guidance were wrong on three separate points below.
+Everything below was found by live-deploying contracts to studionet via the CLI across two smoke-test sessions — not just `python3 -m py_compile`. Read this before assuming an untested pattern "should" work; the SDK docs and this file's own prior guidance were wrong on five separate points below.
 
 **Fixed and reverified end-to-end (safe to build on):**
 - GenVM's runner-comment parser concatenates every consecutive `#`-comment line after the `Depends` pragma into one blob before JSON-parsing it — a multi-line `#`-comment header (the box-drawn doc-comment style used in early drafts of these contracts) corrupts that parse and fails deploy with `invalid_contract`/`absent_runner_comment`. Fixed in all three flagships by moving documentation into a real module docstring. **Do this for every new contract** — pragma line, then a docstring, never a second `#` line.
 - `Address.ZERO` is absent on the pinned runner (see "Addresses" above).
 - `TreeMap[str, typing.Any]` as an ad-hoc dict builder is broken (see "Storage types" above).
 - `response_format="json"` inside `gl.eq_principle.prompt_comparative` crashes GenVM with a raw `INTERNAL_ERROR` VM fault — reproduced 3 of 4 attempts, including with the minimum `ensemble_size`, ruling out prompt size as the cause; an isolation test with plain-text `exec_prompt` succeeded cleanly every time. Fixed in `DissensusOracle` and `JailbreakBounty` via `parse_json_response()` (see NON-DETERMINISM rule 6 above). **Untested with `strict_eq` or `prompt_non_comparative`** — the failure is specific to the `prompt_comparative` combination as verified; don't generalize the ban beyond that without testing.
+- Accepting an `Address` argument via `str` + `Address(who)` crashes when the caller passes a hex-address-shaped value — GenVM auto-decodes it as a native `Address` regardless of the parameter's type hint, and re-wrapping an already-`Address` value crashes on this runner (see "Addresses" above). Found in and fixed for both `JailbreakBounty.claimable_of` and `SchellingResolver.claimable_of`; audited the other two flagships, no other occurrences exist.
 
 **Still open — do not claim these are verified:**
-- **`JailbreakBounty`'s real attack path has never executed end-to-end.** `fund()`, `status()`, and `attempt()`'s revert guard (`"nothing to win yet"`) are confirmed live. The `adjudicate()` LLM logic now uses the same `parse_json_response` pattern proven working in `DissensusOracle.resolve()`, but the full payable-fund → judge → payout → withdraw flow has never actually run, because of the CLI limitation below. Verify via Studio's browser UI (has a value field) before relying on this contract with real funds.
+- **`JailbreakBounty`'s and `SchellingResolver`'s real payable paths have never executed end-to-end.** `JailbreakBounty`: `fund()`, `status()`, and `attempt()`'s revert guard (`"nothing to win yet"`) are confirmed live; the full payable-fund → judge → payout → withdraw flow has not. `SchellingResolver`: every non-payable guard is confirmed live (`resolve()`, `submit()`, `claim()`, `get()`, `winning_indices()` all revert correctly on empty/invalid state), but `submit()` requires a real stake, so the `resolve()` LLM-clustering path has never run. Both are blocked by the CLI limitation below — verify via Studio's browser UI (has a value field) before relying on either contract with real funds.
 - **`genlayer write` (CLI v0.39.2) cannot send payable value at all** — `write.ts` hardcodes `value: 0n`; `--fee-value` is an unrelated gas/fee-deposit concept. There is currently no CLI-only way to smoke-test any `.payable` method.
-- **Contract-to-contract calls (`gl.get_contract_at`) remain completely unexercised.** This was already flagged as the least-verified surface in the repo before this session, and nothing in this session touched it — the untested-surface warning under "Contract-to-contract" above still stands at full strength. Treat every `# VERIFY:`-tagged cross-contract call in future contracts (MirrorAudit, ConsensusThermometer, etc.) as unproven until tested live, the same way the four bugs above were found: by actually deploying and calling, not by reasoning from the docs.
+- **Contract-to-contract calls (`gl.get_contract_at`) remain completely unexercised.** This was already flagged as the least-verified surface in the repo, and nothing across either session has touched it — the untested-surface warning under "Contract-to-contract" above still stands at full strength. Treat every `# VERIFY:`-tagged cross-contract call in future contracts (MirrorAudit, ConsensusThermometer, etc.) as unproven until tested live, the same way the bugs above were found: by actually deploying and calling, not by reasoning from the docs.
 
 ---
 
@@ -211,12 +221,11 @@ Style: keep the deterministic/non-deterministic boundary visually obvious. Comme
 
 ---
 
-## Build queue (remaining 17, fully specified in CONTRACTS.md)
+## Build queue (remaining 16, fully specified in CONTRACTS.md)
 
 Next batch (priority — these show contract-to-contract + self-referential consensus):
-- **SchellingResolver** (IV) — semantic clustering, focal-point payout
-- **MirrorAudit** (VI) — reads another contract's state, judges conformance
-- **ConsensusThermometer** (VI) — predicts validator agreement before committing
+- **MirrorAudit** (VI) — reads another contract's state, judges conformance. Depends on `gl.get_contract_at`, which remains completely unverified — see "Known blockers" above before starting.
+- **ConsensusThermometer** (VI) — predicts validator agreement before committing. Same cross-contract dependency as MirrorAudit.
 - **SemanticDeadman** (VII) — liveness judged from a web source
 
 Then: AmbiguityGuard, PolyglotConsensus, SemanticCommitReveal, IntentLock, SemanticDiffLedger, ConstitutionalContract, AdversarialReview, CorroborationOracle, ProvenanceAttestor, CanaryTripwire, EquivalenceRegistry, EscalatingVerdict, RealitySettledMarket.

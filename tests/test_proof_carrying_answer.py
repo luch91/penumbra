@@ -8,6 +8,8 @@ queryable; an unsound proof leaves no trace; duplicates are rejected. We avoid
 hand-picking borderline proofs whose soundness even humans would debate.
 """
 
+import json
+
 from gltest import get_contract_factory
 from gltest.assertions import tx_execution_succeeded
 
@@ -25,7 +27,7 @@ def test_sound_proof_is_attested():
     assert tx_execution_succeeded(receipt)
     assert c.is_attested(args=[claim]).call() is True
     assert c.count().call() == 1
-    rec = c.get(args=[0]).call()
+    rec = json.loads(c.get(args=[0]).call())
     assert rec["confidence_milli"] > 0
 
 

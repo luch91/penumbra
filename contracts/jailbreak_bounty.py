@@ -206,8 +206,12 @@ Return ONLY strict JSON:
         )
 
     @gl.public.view
-    def claimable_of(self, who: str) -> int:
-        return int(self.claimable.get(Address(who), u256(0)))
+    def claimable_of(self, who: Address) -> int:
+        # `who` may already arrive as a native Address (address-shaped calldata
+        # is auto-decoded regardless of a `str` type hint) — wrapping an
+        # already-Address value in Address(...) crashes on this runner.
+        addr = who if isinstance(who, Address) else Address(who)
+        return int(self.claimable.get(addr, u256(0)))
 
     @gl.public.view
     def winning_attack(self) -> str:

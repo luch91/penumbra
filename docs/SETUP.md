@@ -26,7 +26,7 @@ Studionet, Asimov, and Bradbury all **reject floating tags** (`py-genlayer:test`
 2. Contracts → paste a file from `contracts/` → Deploy (constructor params are auto-detected).
 3. Call the read/write methods and watch the consensus logs.
 
-Smoke-test the three flagships first: `dissensus_oracle.py` (deploy `7, 250`; `resolve("Is water wet?")`), `jailbreak_bounty.py` (deploy with a rule; `fund()` with value; `attempt("hello")`), `proof_carrying_answer.py` (`attest` a sound proof, then a bogus one).
+Smoke-test the four built contracts first: `dissensus_oracle.py` (deploy `7, 250`; `resolve("Is water wet?")`), `jailbreak_bounty.py` (deploy with a rule; `fund()` with value; `attempt("hello")`), `proof_carrying_answer.py` (`attest` a sound proof, then a bogus one), `schelling_resolver.py` (deploy `2`; `submit("blue")` with value from two different accounts, then `resolve()`).
 
 ## CLI smoke-testing
 

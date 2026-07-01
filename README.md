@@ -36,7 +36,7 @@ The mission bar is explicit: no hello-worlds, no thin LLM wrappers, no "AI decid
 
 ## The catalog — 20 primitives in 8 families
 
-Status legend: ✅ built & syntax-verified in this repo · ◻️ specified, scheduled in the build queue.
+Status legend: ✅ built and live-smoke-tested on studionet (deploy + method calls, not just syntax) · ◻️ specified, scheduled in the build queue.
 
 ### I · Oracles of Doubt — *disagreement as signal*
 1. ✅ **DissensusOracle** — answers a contested question *and* publishes a `dissensus` score by self-ensembling K expert opinions; the comparative principle forces validators to agree on both the verdict and how hard the question was. Downstream contracts gate on it. → `contracts/dissensus_oracle.py`
@@ -54,7 +54,7 @@ Status legend: ✅ built & syntax-verified in this repo · ◻️ specified, sch
 
 ### IV · Adversaria — *consensus as referee in a game*
 9. ✅ **JailbreakBounty** — escrow that pays a challenger iff independent validators agree their prompt broke a stated rule. The inverse of Wizard-of-Coin: breaking the guard is the win, and the network is the impartial judge. → `contracts/jailbreak_bounty.py`
-10. ◻️ **SchellingResolver** — players answer a subjective question; consensus clusters the answers and rewards those who matched the focal meaning. Keynesian beauty contest via semantic clustering.
+10. ✅ **SchellingResolver** — players answer a subjective question; consensus clusters the answers and rewards those who matched the focal meaning. Keynesian beauty contest via semantic clustering. → `contracts/schelling_resolver.py`
 11. ◻️ **AdversarialReview** — stages two opposing LLM advocates inside the leader block; validators judge which case is stronger. Debate-as-consensus.
 
 ### V · Corroboration — *trustless web, verified across sources*
@@ -89,11 +89,13 @@ penumbra/
 ├── contracts/                 ← one standalone GenVM file per primitive
 │   ├── dissensus_oracle.py
 │   ├── jailbreak_bounty.py
-│   └── proof_carrying_answer.py
+│   ├── proof_carrying_answer.py
+│   └── schelling_resolver.py
 └── tests/                     ← gltest integration tests; assert invariants, never LLM strings
     ├── test_dissensus_oracle.py
     ├── test_jailbreak_bounty.py
-    └── test_proof_carrying_answer.py
+    ├── test_proof_carrying_answer.py
+    └── test_schelling_resolver.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs, exactly as the ecosystem's `genlayer-utils` convention does.
