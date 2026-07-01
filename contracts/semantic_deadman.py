@@ -1,13 +1,13 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """
-PENUMBRA · VII. CHRONOMANCY · 18
+PENUMBRA -- VII. CHRONOMANCY -- 18
 
-SemanticDeadman — a dead-man's switch that releases on genuine SEMANTIC
+SemanticDeadman -- a dead-man's switch that releases on genuine SEMANTIC
 inactivity, not a missed timestamp ping.
 
 WHY IT IS UNUSUAL
   A mechanical dead-man's switch only knows one fact: did check_in() get
-  called before a deadline. That is trivially wrong for its real purpose —
+  called before a deadline. That is trivially wrong for its real purpose --
   someone can be alive and simply forget to click a button, or a script can
   fake a heartbeat forever. This contract instead points at a real public
   activity source (a profile, a feed, a repo) and asks the network to judge
@@ -21,13 +21,13 @@ HOW CONSENSUS IS USED
   activity that has visibly advanced since then. Consensus uses the
   COMPARATIVE principle keyed on a single `alive` boolean: every validator
   independently re-fetches the source and re-judges, so a release requires
-  INDEPENDENT agreement that the trail has gone cold — not one validator's
+  INDEPENDENT agreement that the trail has gone cold -- not one validator's
   stale cache or one model's hallucinated read of the page.
 
   ASSUMPTION (forced by a live-confirmed runner gap, documented in DECISIONS.md
   2026-07-01): CONTRACTS.md's one-liner spec names a `last_alive_ts` field, and
   the SDK's published API text documents `gl.message.datetime: str`. Neither
-  exists to lean on here — a live isolation deploy on this pinned runner proved
+  exists to lean on here -- a live isolation deploy on this pinned runner proved
   `gl.message` exposes only `chain_id`, `contract_address`, `origin_address`,
   `sender_address`, and `value`; accessing `.datetime` raises
   `AttributeError: 'MessageType' object has no attribute 'datetime'`. There is
@@ -37,7 +37,7 @@ HOW CONSENSUS IS USED
   stores a short LLM-produced description of the activity it observed (a
   snapshot), and each `poke()` asks the model whether the freshly fetched
   source shows genuine activity that has visibly ADVANCED since that snapshot
-  — not whether a clock has ticked. This is arguably a better fit for "semantic
+  -- not whether a clock has ticked. This is arguably a better fit for "semantic
   inactivity, not a missed timestamp ping" than a timestamp comparison would
   have been anyway.
 
@@ -45,8 +45,8 @@ STATE & MONEY DESIGN
   A single escrowed treasury (funded via a separate payable `fund()`, matching
   the pattern in JailbreakBounty/SchellingResolver) that flips exactly once
   from owner-controlled to beneficiary-claimable. `check_in()` is the cheap
-  deterministic path — the owner can always reset the switch directly, no LLM
-  call needed. `poke()` is the expensive semantic path — anyone can call it
+  deterministic path -- the owner can always reset the switch directly, no LLM
+  call needed. `poke()` is the expensive semantic path -- anyone can call it
   (so the beneficiary isn't dependent on the owner's cooperation), and it only
   moves state when consensus agrees the source itself proves continued life.
   Release uses the PULL pattern: `claim()` withdraws separately from `poke()`.
@@ -58,25 +58,25 @@ REUSE
 
 ## Runner verification
   This contract's non-deterministic block calls `gl.nondet.web.render(url,
-  mode="text")` — one of the surfaces marked unverified in
+  mode="text")` -- one of the surfaces marked unverified in
   docs/claude-code-prompts.md ("Mark the unverified surfaces"). The exact call
   is isolated on the line tagged `# VERIFY:` inside `poke()`. Confirm in Studio:
   (1) `render()` returns a plain `str` of visible text, not a wrapper object;
   (2) a real profile/feed URL renders enough content for the model to judge
-  activity, rather than an empty shell (many pages are JS-rendered — `mode=
+  activity, rather than an empty shell (many pages are JS-rendered -- `mode=
   "html"` may be needed instead of `"text"` for such sources; this has not been
   tested against a real target site). If `poke()` reverts with a Python
   TypeError instead of a clean revert, the render() return shape differs from
   what's assumed here.
 
   Unlike JailbreakBounty/SchellingResolver, `poke()` and `check_in()` are both
-  plain (non-payable) writes, so — unlike those two contracts — the full
+  plain (non-payable) writes, so -- unlike those two contracts -- the full
   LLM-judgment path here CAN be exercised end-to-end via the `genlayer` CLI
   without the payable-value limitation. Only `fund()` needs Studio's browser UI.
 
   CONFIRMED live (2026-07-01): `gl.message` on this pinned runner exposes only
   `chain_id`, `contract_address`, `origin_address`, `sender_address`, `value`
-  — no `.datetime`, no block number, no clock of any kind. Do not reintroduce
+  -- no `.datetime`, no block number, no clock of any kind. Do not reintroduce
   a `gl.message.datetime` read into this contract without re-verifying the
   runner has changed.
 """
@@ -84,7 +84,7 @@ REUSE
 from genlayer import *
 import json
 
-# ── PENUMBRA helpers ──────────────────────────────────────────────────────────
+# -- PENUMBRA helpers ----------------------------------------------------------
 try:
     _PenumbraError = gl.vm.UserError
 except Exception:
@@ -102,7 +102,7 @@ def canonical(obj) -> str:
 
 def parse_json_response(text: str) -> dict:
     # response_format="json" crashes GenVM when combined with prompt_comparative
-    # on this runner (confirmed by isolation testing) — ask the model for JSON as
+    # on this runner (confirmed by isolation testing) -- ask the model for JSON as
     # plain text instead and parse it ourselves, tolerating markdown code fences.
     t = text.strip()
     if t.startswith("```"):
@@ -114,7 +114,7 @@ def parse_json_response(text: str) -> dict:
     if start != -1 and end != -1:
         t = t[start : end + 1]
     return json.loads(t)
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 
 class SemanticDeadman(gl.Contract):
@@ -143,13 +143,13 @@ class SemanticDeadman(gl.Contract):
         self.treasury = u256(0)
         self.released = False
 
-    # ── funding ──────────────────────────────────────────────────────────────
+    # -- funding --------------------------------------------------------------
     @gl.public.write.payable
     def fund(self) -> None:
         require(not self.released, "already released")
         self.treasury = u256(int(self.treasury) + int(gl.message.value))
 
-    # ── cheap deterministic path ────────────────────────────────────────────
+    # -- cheap deterministic path --------------------------------------------
     @gl.public.write
     def check_in(self) -> None:
         """The owner resets the switch directly. No LLM call, no ambiguity.
@@ -159,10 +159,10 @@ class SemanticDeadman(gl.Contract):
         require(not self.released, "already released")
         self.last_alive_snapshot = ""
 
-    # ── expensive semantic path ──────────────────────────────────────────────
+    # -- expensive semantic path ----------------------------------------------
     @gl.public.write
     def poke(self) -> bool:
-        """Anyone may call this — the beneficiary should not depend on the
+        """Anyone may call this -- the beneficiary should not depend on the
         owner's cooperation to eventually trigger a real check."""
         require(not self.released, "already released")
 
@@ -171,11 +171,11 @@ class SemanticDeadman(gl.Contract):
         last_snapshot = self.last_alive_snapshot
 
         def judge_liveness() -> str:
-            # VERIFY: gl.nondet.web.render shape is unverified on this runner —
+            # VERIFY: gl.nondet.web.render shape is unverified on this runner --
             # see "## Runner verification" in the module docstring.
             #
             # A fetch failure (dead domain, DNS failure, disallowed TLD, etc.)
-            # raises inside render() rather than returning content — confirmed
+            # raises inside render() rather than returning content -- confirmed
             # live via gl.nondet.NondetException (e.g. {'causes':
             # ['TLD_FORBIDDEN'], ...}). An uncaught raise here would abort the
             # whole poke() transaction instead of being read as evidence the
@@ -189,12 +189,12 @@ class SemanticDeadman(gl.Contract):
             baseline_note = (
                 f'PREVIOUSLY OBSERVED ACTIVITY (the last confirmed-alive baseline): "{last_snapshot}"'
                 if last_snapshot
-                else "PREVIOUSLY OBSERVED ACTIVITY: none recorded yet — this is the first check "
+                else "PREVIOUSLY OBSERVED ACTIVITY: none recorded yet -- this is the first check "
                 "since the switch was armed or last reset by the owner."
             )
             prompt = f"""You are assessing whether a person or project is still
 genuinely active, for a dead-man's-switch contract. There is NO clock or
-timestamp available to you or to this contract — you must judge liveness
+timestamp available to you or to this contract -- you must judge liveness
 purely from the CONTENT of the source, comparing it against what was
 previously observed.
 
@@ -210,7 +210,7 @@ CONTENT FETCHED FROM THE LIVENESS SOURCE ({url}):
 
 Judge whether this content shows genuine activity consistent with the policy
 that has visibly ADVANCED beyond the previously observed baseline (a new post,
-a new commit, a changed status — not just the same static page repeating what
+a new commit, a changed status -- not just the same static page repeating what
 was already known). If there is no baseline yet, judge whether the content
 shows ANY genuine current activity consistent with the policy. Be conservative:
 an unchanged page, a parked domain, or a fetch error all count as NOT alive.
@@ -249,7 +249,7 @@ Return ONLY strict JSON, no prose, no markdown:
             )
         return True
 
-    # ── disbursement (pull pattern) ──────────────────────────────────────────
+    # -- disbursement (pull pattern) ------------------------------------------
     @gl.public.write
     def claim(self) -> int:
         who = gl.message.sender_address
@@ -260,7 +260,7 @@ Return ONLY strict JSON, no prose, no markdown:
         # internal ledger above is authoritative and already debited.
         return owed
 
-    # ── reads ────────────────────────────────────────────────────────────────
+    # -- reads ----------------------------------------------------------------
     @gl.public.view
     def status(self) -> str:
         return canonical(
@@ -278,7 +278,7 @@ Return ONLY strict JSON, no prose, no markdown:
     @gl.public.view
     def claimable_of(self, who: Address) -> int:
         # `who` may already arrive as a native Address (address-shaped calldata
-        # is auto-decoded regardless of a `str` type hint) — wrapping an
+        # is auto-decoded regardless of a `str` type hint) -- wrapping an
         # already-Address value in Address(...) crashes on this runner.
         addr = who if isinstance(who, Address) else Address(who)
         return int(self.claimable.get(addr, u256(0)))

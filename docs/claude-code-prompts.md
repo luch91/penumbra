@@ -9,7 +9,7 @@ Paste the batch prompt below into Claude Code from the repo root (after `claude`
 ```
 Read CLAUDE.md, README.md, and CONTRACTS.md in full before writing anything —
 CLAUDE.md's "Known blockers & open verification gaps" section is not optional
-reading: it documents nine bugs that passed py_compile cleanly and only broke
+reading: it documents ten bugs that passed py_compile cleanly and only broke
 on a live deploy. Do not reproduce them.
 Then read all six existing built contracts as the style and correctness reference:
 contracts/dissensus_oracle.py, contracts/jailbreak_bounty.py,
@@ -57,6 +57,17 @@ purpose or the consensus move. Honor every rule in CLAUDE.md, in particular:
   markdown code fences); copy the parse_json_response pattern from
   dissensus_oracle.py or jailbreak_bounty.py.
 - Payouts use the pull-payment ledger pattern with the marked native-transfer hook.
+- Write contracts/<snake>.py in PURE ASCII — no em dashes, middle dots, box-
+  drawing dividers, curly quotes, or ellipses anywhere in the file, including
+  the docstring. Confirmed live: gltest's schema-fetch client crashes with
+  UnicodeEncodeError on any non-ASCII byte in a contract's source, and its own
+  logger that would show this is disabled by default, so the failure looks
+  like a generic, unexplained "Failed to get schema from all clients" instead.
+  Every existing contract in this repo was fixed for exactly this (see
+  CLAUDE.md "Known blockers" and DECISIONS.md's 2026-07-01 entry). Use --, -,
+  ., and ... instead. This restriction is ONLY for files under contracts/ —
+  README.md/CONTRACTS.md/CLAUDE.md/docs/*.md are unaffected and keep normal
+  typography.
 - Do NOT read gl.message.datetime, or assume any clock/timestamp/block-number
   accessor exists. Confirmed live: this pinned runner's gl.message exposes
   ONLY chain_id, contract_address, origin_address, sender_address, value —
@@ -123,7 +134,7 @@ For each contract you must produce:
 After writing each contract:
 1. Run `python3 -m py_compile contracts/<file>.py` and fix any syntax error.
    This is a necessary gate, not a sufficient one — py_compile passed cleanly
-   on every one of the nine bugs found in the existing built contracts.
+   on every one of the ten bugs found in the existing built contracts.
 2. Live-smoke-test it yourself via the genlayer CLI before moving to the next
    contract: `genlayer deploy --contract contracts/<file>.py --args ...`, then
    `genlayer call`/`genlayer write` its public methods. An account must already
@@ -133,9 +144,14 @@ After writing each contract:
    just that the transaction was `ACCEPTED` — a transaction can reach `ACCEPTED`
    via validator consensus even when every validator independently errored
    (this happened during Penumbra's own smoke testing: all validators agreed
-   the contract was invalid, and consensus still "succeeded"). Do not run the
-   full gltest suite yourself; the CLI smoke test is enough to catch a broken
-   deploy before it compounds across contracts.
+   the contract was invalid, and consensus still "succeeded").
+3. gltest now works end-to-end in this repo (see CLAUDE.md "Known blockers" —
+   it took finding a real UnicodeEncodeError bug to get there, fixed by
+   keeping contracts/*.py pure ASCII per the rule above). Run
+   `gltest --network studionet tests/test_<snake>.py` (conda env `genlayer`,
+   Python 3.12+, `.env` copied from `.env.example`) and confirm it actually
+   passes — don't just write the test file and assume it would pass. A stray
+   non-ASCII character is now the single most likely reason it wouldn't.
 
 Work in small commits, one contract per commit, message:
 "Penumbra: add <Name> (<family>)". Show me each file when it's done and pause
@@ -175,10 +191,11 @@ built contracts. Commit as "Penumbra: add <NAME> (<family>)".
 - Don't let it mock the Anthropic/LLM calls in tests — these are live by design.
 - Don't let it weaken a precondition or invariant to make a flaky non-deterministic assertion pass. Re-run instead.
 - Don't let it collapse multiple contracts into one file — one `gl.Contract` per module.
-- Don't let it treat a clean `py_compile` as proof the contract works. Seven real bugs in the existing built contracts passed `py_compile` and only surfaced on a live deploy — require an actual `genlayer deploy` plus a method call per contract.
+- Don't let it treat a clean `py_compile` as proof the contract works. Ten real bugs in the existing built contracts passed `py_compile` and only surfaced on a live deploy or a real gltest run — require an actual `genlayer deploy` plus a method call per contract.
 - Don't let it copy the box-drawn `#`-comment header style from git history or old drafts of the flagships — only the current docstring-based header is deploy-safe.
 - Don't let it assume `gl.message` has a `.datetime`, block number, or any clock — confirmed absent on this runner despite being in the SDK docs.
 - Don't let it leave a `gl.nondet.web.render`/`.get` call unwrapped in try/except — a fetch failure raises an uncaught exception, not a returned error value.
+- Don't let it write an em dash, middle dot, box-drawing divider, or any other non-ASCII character anywhere inside `contracts/*.py` — confirmed to silently break `gltest` with an unhelpful generic error.
 
 ## Mark the unverified surfaces (applies to every contract)
 Two API surfaces are not yet confirmed on the runner: cross-contract `.emit()`

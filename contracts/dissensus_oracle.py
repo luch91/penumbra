@@ -1,8 +1,8 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """
-PENUMBRA · I. ORACLES OF DOUBT · 01
+PENUMBRA -- I. ORACLES OF DOUBT -- 01
 
-DissensusOracle — an oracle that answers a question AND reports how much it
+DissensusOracle -- an oracle that answers a question AND reports how much it
 should be trusted, by measuring its own internal disagreement.
 
 WHY IT IS UNUSUAL
@@ -25,7 +25,7 @@ HOW CONSENSUS IS USED
   to within a tolerance. So two things must hold for a write to land: the model
   must reach a verdict, AND independent validators (running different LLMs) must
   concur on how *hard* the question was. A question that is hard in an unstable
-  way — where even the difficulty is unclear — fails consensus and reverts.
+  way -- where even the difficulty is unclear -- fails consensus and reverts.
   That failure is itself meaningful: the oracle declines to speak.
 
 STATE DESIGN
@@ -42,7 +42,7 @@ from genlayer import *
 import json
 from dataclasses import dataclass
 
-# ── PENUMBRA helpers (copied; see lib/penumbra_consensus.py) ──────────────────
+# -- PENUMBRA helpers (copied; see lib/penumbra_consensus.py) ------------------
 try:
     _PenumbraError = gl.vm.UserError
 except Exception:
@@ -60,7 +60,7 @@ def canonical(obj) -> str:
 
 def parse_json_response(text: str) -> dict:
     # response_format="json" crashes GenVM when combined with prompt_comparative
-    # on this runner (confirmed by isolation testing) — ask the model for JSON as
+    # on this runner (confirmed by isolation testing) -- ask the model for JSON as
     # plain text instead and parse it ourselves, tolerating markdown code fences.
     t = text.strip()
     if t.startswith("```"):
@@ -72,7 +72,7 @@ def parse_json_response(text: str) -> dict:
     if start != -1 and end != -1:
         t = t[start : end + 1]
     return json.loads(t)
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 
 @allow_storage
@@ -163,7 +163,7 @@ genuine spread of expert opinion: near 1.0 only when the answer is clear-cut."""
         self.latest = u256(len(self.records) - 1)
         return verdict
 
-    # ── reads ────────────────────────────────────────────────────────────────
+    # -- reads ----------------------------------------------------------------
     @gl.public.view
     def count(self) -> int:
         return len(self.records)

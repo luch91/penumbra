@@ -1,16 +1,16 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """
-PENUMBRA · IV. ADVERSARIA · 10
+PENUMBRA -- IV. ADVERSARIA -- 10
 
-SchellingResolver — resolves a subjective question by paying whoever matched
+SchellingResolver -- resolves a subjective question by paying whoever matched
 the crowd's focal answer. A Keynesian beauty contest done with semantic
 clustering instead of numeric guesses.
 
 WHY IT IS UNUSUAL
   Classic Schelling-point games need a human tally to find the focal point,
   or a numeric answer simple enough to bucket mechanically. This contract lets
-  the focal point be FREE TEXT — "blue", "the sky", "azure-ish" all belong to
-  the same cluster — and has the network itself agree on which submissions
+  the focal point be FREE TEXT -- "blue", "the sky", "azure-ish" all belong to
+  the same cluster -- and has the network itself agree on which submissions
   cluster together, not just what any single submission means.
 
 HOW CONSENSUS IS USED
@@ -21,14 +21,14 @@ HOW CONSENSUS IS USED
   independently re-clusters the same submissions, and the principle requires
   the winning index SET to match exactly (wording used to describe the
   cluster is irrelevant). A clustering that only one model would produce does
-  not clear consensus and the resolution reverts — exactly like a jailbreak
+  not clear consensus and the resolution reverts -- exactly like a jailbreak
   that only works on one model, an unstable Schelling point is not a Schelling
   point.
 
 STATE & MONEY DESIGN
   Submissions are an append-only `DynArray[Submission]`; each carries its own
   staked value. `resolve()` computes the total pool from every submission
-  (winners and losers alike — the losers' stakes ARE the winners' prize) and
+  (winners and losers alike -- the losers' stakes ARE the winners' prize) and
   splits it evenly across the winning indices via the PULL-payment pattern:
   `claimable` is credited, `claim()` withdraws separately.
 
@@ -40,7 +40,7 @@ REUSE
 ## Runner verification
   `submit()` is `@gl.public.write.payable` and requires `gl.message.value > 0`
   as the stake. `genlayer write` (CLI v0.39.2) hardcodes `value: 0n` on every
-  call, so `submit()` cannot be driven to a real success via the CLI — every
+  call, so `submit()` cannot be driven to a real success via the CLI -- every
   CLI-issued `submit()` reverts on "stake required" by construction, which
   means `resolve()`'s live LLM-clustering path has NOT been exercised end to
   end here. Verify via Studio's browser UI (has a value field on write calls)
@@ -52,7 +52,7 @@ from genlayer import *
 import json
 from dataclasses import dataclass
 
-# ── PENUMBRA helpers ──────────────────────────────────────────────────────────
+# -- PENUMBRA helpers ----------------------------------------------------------
 try:
     _PenumbraError = gl.vm.UserError
 except Exception:
@@ -70,7 +70,7 @@ def canonical(obj) -> str:
 
 def parse_json_response(text: str) -> dict:
     # response_format="json" crashes GenVM when combined with prompt_comparative
-    # on this runner (confirmed by isolation testing) — ask the model for JSON as
+    # on this runner (confirmed by isolation testing) -- ask the model for JSON as
     # plain text instead and parse it ourselves, tolerating markdown code fences.
     t = text.strip()
     if t.startswith("```"):
@@ -82,7 +82,7 @@ def parse_json_response(text: str) -> dict:
     if start != -1 and end != -1:
         t = t[start : end + 1]
     return json.loads(t)
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 
 @allow_storage
@@ -105,7 +105,7 @@ class SchellingResolver(gl.Contract):
         self.min_submissions = u256(min_submissions)
         self.resolved = False
 
-    # ── submission ──────────────────────────────────────────────────────────
+    # -- submission ----------------------------------------------------------
     @gl.public.write.payable
     def submit(self, answer: str) -> int:
         require(not self.resolved, "submissions closed")
@@ -119,7 +119,7 @@ class SchellingResolver(gl.Contract):
         self.submissions.append(sub)
         return len(self.submissions) - 1
 
-    # ── resolution ──────────────────────────────────────────────────────────
+    # -- resolution ----------------------------------------------------------
     @gl.public.write
     def resolve(self) -> str:
         require(not self.resolved, "already resolved")
@@ -175,7 +175,7 @@ Return ONLY strict JSON, no prose, no markdown:
         self.resolved = True
         return canonical({"winning_indices": idxs, "share": share})
 
-    # ── disbursement (pull pattern) ────────────────────────────────────────────
+    # -- disbursement (pull pattern) --------------------------------------------
     @gl.public.write
     def claim(self) -> int:
         who = gl.message.sender_address
@@ -186,7 +186,7 @@ Return ONLY strict JSON, no prose, no markdown:
         # internal ledger above is authoritative and already debited.
         return owed
 
-    # ── reads ────────────────────────────────────────────────────────────────────
+    # -- reads --------------------------------------------------------------------
     @gl.public.view
     def count(self) -> int:
         return len(self.submissions)
@@ -215,7 +215,7 @@ Return ONLY strict JSON, no prose, no markdown:
     @gl.public.view
     def claimable_of(self, who: Address) -> int:
         # `who` may already arrive as a native Address (address-shaped calldata
-        # is auto-decoded regardless of a `str` type hint) — wrapping an
+        # is auto-decoded regardless of a `str` type hint) -- wrapping an
         # already-Address value in Address(...) crashes on this runner.
         addr = who if isinstance(who, Address) else Address(who)
         return int(self.claimable.get(addr, u256(0)))

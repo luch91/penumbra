@@ -1,13 +1,13 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """
-PENUMBRA · VI. REFLEXION · 16
+PENUMBRA -- VI. REFLEXION -- 16
 
-MirrorAudit — one contract audits another against a plain-language behavioral
+MirrorAudit -- one contract audits another against a plain-language behavioral
 spec, reading the target's own reported state via a contract-to-contract call.
 
 WHY IT IS UNUSUAL
   Contracts here have judged claims, prompts, and web content. This one judges
-  ANOTHER CONTRACT — treating the consensus layer as an auditor that can point
+  ANOTHER CONTRACT -- treating the consensus layer as an auditor that can point
   at any deployed address and ask "does this actually behave the way it's
   supposed to?" That is only possible because GenLayer contracts can read each
   other's state deterministically; MirrorAudit is the first primitive in this
@@ -15,21 +15,21 @@ WHY IT IS UNUSUAL
 
 HOW CONSENSUS IS USED
   The cross-contract read happens in the method body, NOT inside a
-  non-deterministic block — it is deterministic (every validator reads the
+  non-deterministic block -- it is deterministic (every validator reads the
   same committed state off the same target address) and must never be treated
   as if it needed an equivalence principle of its own. Only the JUDGMENT of
   whether that state conforms to the spec is uncertain, so the fetched state +
   spec become the identical input to the NON-COMPARATIVE principle: the leader
   rules on conformance, and validators verify the ruling's integrity against
   stated criteria rather than re-deriving it. This is the correct move (not
-  `comparative`) precisely because the input is byte-identical on every node —
+  `comparative`) precisely because the input is byte-identical on every node --
   there is nothing to disagree about except whether the leader's reasoning
   holds, which is exactly what non-comparative is for.
 
   ASSUMPTION (stated per CLAUDE.md instructions, since CONTRACTS.md's spec
   leaves the shape of "the target's public state" open): MirrorAudit expects
   the target contract to expose a `status() -> str` view returning a
-  JSON-canonicalized string of its own state — the same convention every
+  JSON-canonicalized string of its own state -- the same convention every
   contract in this repo already follows (DissensusOracle.latest_verdict,
   JailbreakBounty.status, SemanticDeadman.status, etc.). This keeps MirrorAudit
   generic across any Penumbra-style contract without needing per-target
@@ -40,7 +40,7 @@ STATE DESIGN
   An append-only `DynArray[Audit]` ledger: target address, the boolean
   verdict, and a sha256 digest of the leader's rationale (the full rationale
   is returned transiently from `audit()` but not stored on-chain, mirroring
-  ProofCarryingAnswer's proof_digest — the digest lets anyone who saved the
+  ProofCarryingAnswer's proof_digest -- the digest lets anyone who saved the
   original response verify it wasn't altered, without paying storage for
   prose on every audit).
 
@@ -53,30 +53,30 @@ REUSE
   CONFIRMED live (2026-07-01), via a throwaway isolation test (a stub target
   contract with `get_label() -> str` and `get_count() -> int`, probed by a
   second contract calling `gl.get_contract_at(addr).view().<method>()`):
-  the untyped proxy returns the value DIRECTLY — a plain `str`/`int`, not a
-  wrapper object — and a no-argument view call works exactly as the untyped
+  the untyped proxy returns the value DIRECTLY -- a plain `str`/`int`, not a
+  wrapper object -- and a no-argument view call works exactly as the untyped
   proxy convention in CLAUDE.md describes. This is the first confirmation of
   the "single least-verified surface in the repo" (see CLAUDE.md "Known
   blockers"); full detail in DECISIONS.md, 2026-07-01 entry.
 
-  What remains UNVERIFIED: cross-contract WRITE calls (`.emit()`) — MirrorAudit
+  What remains UNVERIFIED: cross-contract WRITE calls (`.emit()`) -- MirrorAudit
   only reads, so this contract does not exercise that half of the surface.
   ConsensusThermometer or a future contract must confirm `.emit()` separately
   before it's treated as safe.
 
   The cross-contract read is isolated in `_read_target_status`, tagged
-  `# VERIFY:`, and wrapped in try/except — but CONFIRMED live (2026-07-01) that
+  `# VERIFY:`, and wrapped in try/except -- but CONFIRMED live (2026-07-01) that
   this does NOT catch every failure mode, correcting an earlier assumption:
   auditing a target that does not implement `status()` at all does not
   surface as our clean custom message. It fails as an uncaught runner-level
   dispatch fault (`ValueError: call to private method
   <function Contract.__handle_undefined_method__...>`), raised while GenVM
-  resolves the method against the TARGET's own execution context — below the
+  resolves the method against the TARGET's own execution context -- below the
   level our contract's Python exception handling can intercept, and in a
   different way than `gl.nondet.web.render`'s catchable `NondetException`.
   The outcome is still SAFE: every validator independently agrees the call
   errors, the transaction reverts cleanly, and no incorrect audit is ever
-  recorded — it just surfaces as a raw traceback instead of our message. The
+  recorded -- it just surfaces as a raw traceback instead of our message. The
   `try/except` is kept because it may still catch other failure modes (e.g.
   an application-level exception raised inside the target's own `status()`
   body), but do not rely on it for "target lacks the method entirely." Full
@@ -88,7 +88,7 @@ import json
 import hashlib
 from dataclasses import dataclass
 
-# ── PENUMBRA helpers ──────────────────────────────────────────────────────────
+# -- PENUMBRA helpers ----------------------------------------------------------
 try:
     _PenumbraError = gl.vm.UserError
 except Exception:
@@ -102,7 +102,7 @@ def require(condition: bool, message: str) -> None:
 
 def canonical(obj) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"))
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 
 @allow_storage
@@ -119,9 +119,9 @@ class MirrorAudit(gl.Contract):
     def __init__(self):
         pass
 
-    # ── the cross-contract read, isolated so a shape mismatch is one line to fix ──
+    # -- the cross-contract read, isolated so a shape mismatch is one line to fix --
     def _read_target_status(self, target: Address) -> str:
-        # VERIFY: untyped proxy — confirmed live to return the value directly
+        # VERIFY: untyped proxy -- confirmed live to return the value directly
         # (see "## Runner verification" in the module docstring). If a future
         # runner changes this shape, this is the only line that needs to change.
         try:
@@ -130,18 +130,18 @@ class MirrorAudit(gl.Contract):
             return str(state)
         except Exception as e:
             raise _PenumbraError(
-                f"could not read target's status() — target may not implement "
+                f"could not read target's status() -- target may not implement "
                 f"it, or the cross-contract view() shape differs from what's "
                 f"assumed here (see 'Runner verification' in the docstring): {e}"
             )
 
-    # ── the audit ────────────────────────────────────────────────────────────
+    # -- the audit ------------------------------------------------------------
     @gl.public.write
     def audit(self, target: Address, spec: str) -> bool:
         t = target if isinstance(target, Address) else Address(target)
         require(len(spec.strip()) > 0, "spec required")
 
-        # Deterministic cross-contract read — every validator reads the same
+        # Deterministic cross-contract read -- every validator reads the same
         # committed state off the same address, so this is identical input on
         # every node. It must happen here, never inside a nondet block.
         state = self._read_target_status(t)
@@ -165,7 +165,7 @@ class MirrorAudit(gl.Contract):
             "ONLY if every specific, checkable condition named in spec is "
             "actually satisfied by a field present in state; (2) if spec names "
             "a condition that state does not contain enough information to "
-            "verify, 'conforms' must be false — never assume a fact state "
+            "verify, 'conforms' must be false -- never assume a fact state "
             "doesn't state; (3) 'note' must name the specific field(s) in state "
             "the verdict rests on. Reject the verdict if it asserts conformance "
             "without pointing to supporting evidence actually present in state."
@@ -182,7 +182,7 @@ class MirrorAudit(gl.Contract):
         self.audits.append(Audit(target=t, conforms=conforms, note_hash=note_hash))
         return conforms
 
-    # ── reads ────────────────────────────────────────────────────────────────
+    # -- reads ----------------------------------------------------------------
     @gl.public.view
     def count(self) -> int:
         return len(self.audits)

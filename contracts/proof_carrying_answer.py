@@ -1,8 +1,8 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """
-PENUMBRA · II. ASYMMETRIC RITES · 03
+PENUMBRA -- II. ASYMMETRIC RITES -- 03
 
-ProofCarryingAnswer — submit a claim together with the reasoning that backs it.
+ProofCarryingAnswer -- submit a claim together with the reasoning that backs it.
 The network attests the claim only if the proof actually holds. Producing the
 proof is hard; checking it is cheap. This contract is the cheap half.
 
@@ -12,7 +12,7 @@ WHY IT IS UNUSUAL
   the NON-COMPARATIVE equivalence principle, the one principle where the leader
   does the work and the validators ONLY verify integrity. The claim and its
   proof are passed in as plain arguments, so every node sees the identical
-  input — there is nothing to disagree about except whether the proof is sound.
+  input -- there is nothing to disagree about except whether the proof is sound.
   That turns the contract into a trustless verifier for any domain where
   "answer + justification" can be checked more easily than it can be produced:
   the on-chain analogue of a proof-carrying computation.
@@ -22,7 +22,7 @@ HOW CONSENSUS IS USED
   The principle's `task` instructs the leader to verify the proof and emit a
   structured verdict; the `criteria` tell validators exactly what makes a
   verdict trustworthy (every step must follow, the conclusion must match the
-  claim, no gaps). Validators never re-derive the proof — they audit it. If the
+  claim, no gaps). Validators never re-derive the proof -- they audit it. If the
   leader's verdict lacks integrity under the criteria, validators vote it down
   and the attestation never lands.
 
@@ -33,7 +33,7 @@ STATE DESIGN
   trace, so the book contains only attested truth.
 
 REUSE
-  Eligibility proofs ("this address qualifies for the airdrop because …"),
+  Eligibility proofs ("this address qualifies for the airdrop because ..."),
   compliance proofs, math/logic lemmas, derivation of a number from a dataset.
   Pair it with an off-chain solver that races to produce proofs.
 """
@@ -43,7 +43,7 @@ import json
 import hashlib
 from dataclasses import dataclass
 
-# ── PENUMBRA helpers ──────────────────────────────────────────────────────────
+# -- PENUMBRA helpers ----------------------------------------------------------
 try:
     _PenumbraError = gl.vm.UserError
 except Exception:
@@ -53,7 +53,7 @@ except Exception:
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise _PenumbraError(message)
-# ──────────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 
 @allow_storage
@@ -127,7 +127,7 @@ class ProofCarryingAnswer(gl.Contract):
         self.seen[claim_digest] = u256(len(self.attestations))  # 1-based marker
         return True
 
-    # ── reads ────────────────────────────────────────────────────────────────────
+    # -- reads --------------------------------------------------------------------
     @gl.public.view
     def count(self) -> int:
         return len(self.attestations)

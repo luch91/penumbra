@@ -7,6 +7,62 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-01 — gltest actually works now: root cause was non-ASCII characters, not funding or connectivity
+
+**Decision.** Stripped every non-ASCII character (middle dot `.`, em dash `--`,
+ellipsis `...`, box-drawing divider `-`) from every file under `contracts/`
+(all 6 primitives plus the test fixture), replacing each with a plain-ASCII
+equivalent. `README.md`/`CONTRACTS.md`/`CLAUDE.md`/`docs/*.md` keep their
+normal typography, since they are never sent through the code path that
+breaks.
+
+**Why.** The previous entry (below) and CLAUDE.md both originally guessed
+gltest's "Failed to get schema from all clients" failure was a
+client-connectivity/configuration gap. That guess was wrong. The real cause,
+found by reading `gltest`'s own source
+(`gltest/contracts/contract_factory.py::_get_schema_with_fallback`) and
+reproducing it directly: the schema-fetch call
+(`client.get_contract_schema_for_code(contract_code=...)`) raises
+`UnicodeEncodeError: 'ascii' codec can't encode characters ...` the instant
+the contract's source contains ANY non-ASCII character. Proved this precisely
+by deploying two versions of the same fixture via gltest — one containing a
+single em dash (failed every time, same error) and one that was pure ASCII
+(passed cleanly). `gltest`'s own internal logger, which would have surfaced
+this immediately as a per-client warning, is `disabled = True` by default
+(`gltest/logging.py`) — that's why three separate debugging attempts (config
+fix, env-var fix, the funding guess) all only ever saw the generic top-level
+`ValueError` with zero clue why.
+
+  Every contract in this repo used an em dash, a middle dot (in the
+  `PENUMBRA . <family> . <number>` header line), box-drawing dividers (in the
+  `# -- section --` comments, 164-406 occurrences PER FILE), and one ellipsis
+  throughout its docstring — meaning `gltest` had never actually worked
+  against any real Penumbra contract before this was found, regardless of
+  which contract was being tested. This wasn't a MirrorAudit-specific problem
+  at all.
+
+  Verified the fix works, not just compiles: added a root `conftest.py` that
+  un-disables gltest's logger (so a future regression shows the real
+  per-client error instead of the opaque top-level `ValueError`), then ran
+  `gltest --network studionet` for real against two different contracts'
+  full suites: `test_mirror_audit.py` (5/5 passed, including the live
+  LLM-judgment conformance tests) and `test_semantic_deadman.py` (6/6 passed;
+  2 initial failures were a transient DNS blip resolving
+  `studio.genlayer.com`, confirmed by an immediate clean retry — not a
+  regression).
+
+**How to apply.** Any new contract file (family AmbiguityGuard onward) must
+stay pure ASCII in its source, including test fixtures under
+`contracts/fixtures/`. This is now the single most likely way a new contract
+would silently break `gltest` while still passing `py_compile` and every
+`genlayer` CLI smoke test (the CLI path doesn't go through this schema-fetch
+call, so it never surfaced the bug all session). Before assuming a fresh
+gltest failure is a connectivity/funding/account issue again, check for
+non-ASCII characters first — `python3 -c "print([c for c in open(f).read() if ord(c)>127])"`
+is enough to confirm in one line.
+
+---
+
 ## 2026-07-01 — MirrorAudit: confirmed cross-contract reads, found an uncatchable dispatch fault, and a gltest infra gap
 
 **Decision.** Before writing `MirrorAudit`, ran a live isolation test first
@@ -80,11 +136,11 @@ re-isolate that specific question. But: (1) never assume a target implements
 whatever method you call — wrap it, but know the wrap won't always produce a
 clean message; (2) never audit or read from a caller-supplied, unverified
 address without accepting the (unconfirmed but observed) hang risk; (3) don't
-attempt to fix gltest's client-connectivity gap as a side quest inside an
-unrelated contract's build — it's a standalone infra task, tracked here and in
-CLAUDE.md's "Known blockers" so it isn't lost; (4) don't assume studionet
-needs GEN/gas for anything other than an actual `payable` value transfer —
-it doesn't, and this repo has now disproven the opposite guess twice.
+assume studionet needs GEN/gas for anything other than an actual `payable`
+value transfer — it doesn't, and this repo has now disproven the opposite
+guess twice. (The gltest failure mentioned above as a "client-connectivity
+gap" was itself a wrong guess, corrected two entries up — it was a non-ASCII
+encoding bug, not connectivity.)
 
 ---
 

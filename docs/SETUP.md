@@ -44,17 +44,22 @@ Smoke-test the five built contracts first: `dissensus_oracle.py` (deploy `7, 250
 conda create -n genlayer python=3.12 -y
 conda activate genlayer            # re-run this in every new terminal
 pip install -r requirements-dev.txt
+cp .env.example .env               # gltest needs this env var defined even for studionet — see below
 gltest --network studionet         # studionet needs no Docker
 # single file while iterating:
 gltest --network studionet tests/test_dissensus_oracle.py
 ```
 
+The repo root's `conftest.py` un-disables `gltest`'s own internal logger (disabled by default upstream), so a schema-fetch failure shows the real per-client reason instead of a generic `ValueError`. Don't remove it.
+
 These tests call live LLMs, so a borderline non-deterministic assertion can occasionally flake — re-run before treating it as a real failure. The structural assertions (preconditions, dedupe, ledger math) are deterministic and should always pass.
 
-**gltest has not been run end-to-end in this repo yet — confirmed live 2026-07-01 while building MirrorAudit.** Two real gaps found:
+**gltest now actually works end-to-end in this repo — confirmed live 2026-07-01.** It took three fixes to get there, and the real blocker was not what it first looked like:
 - `gltest.config.yaml` had `studionet:` with no value, which YAML parses as `null` — gltest requires every network entry to be a dictionary. **Fixed**: changed to `studionet: {}`.
 - `gltest` also eagerly validates every network block in the config, including unused ones — it errored on a missing `ACCOUNT_PRIVATE_KEY_1` (needed only by `testnet_asimov`) even when running `--network studionet`. Set a placeholder in the environment (or a `.env` file) to get past config validation.
-- **Still unresolved**: deploying via `gltest` fails with `ValueError: Failed to get schema from all clients (default, hosted studio, and local)`. **This is not a funding/gas issue** — studionet does not require GEN for gas, and this repo's own `genlayer` CLI account (`smoketest`) has sat at `0 GEN` balance through every successful deploy this session. Reading `gltest`'s own source (`gltest/contracts/contract_factory.py`, `_get_schema_with_fallback`) shows the real cause: it fetches the contract's schema via `client.get_contract_schema_for_code(...)` — a pure source-code-to-schema RPC call, independent of any deployed instance or account balance — tried in turn against three separately-configured clients ("default", "hosted studio", "local"). All three failed in this shell, which points to those clients not being reachable/configured correctly in this environment (network/RPC config), not to the ephemeral account `gltest/glchain/account.py` generates via `genlayer_py.create_account()` having no balance. Until the actual client-connectivity cause is found, this repo's verification path remains the live `genlayer` CLI (deploy/call/write), not `gltest` — the test files exist and are believed correct by inspection, but have not themselves been executed successfully against studionet.
+- **The real blocker, and the one that actually mattered**: every deploy via `gltest` failed with `ValueError: Failed to get schema from all clients (default, hosted studio, and local)`. This is NOT a funding/gas issue (studionet doesn't need GEN for gas — this repo's own `genlayer` CLI account sat at `0 GEN` through every successful deploy all session) and NOT a client-connectivity issue either, despite that being the first two guesses. The actual cause, found by reading `gltest`'s source (`gltest/contracts/contract_factory.py::_get_schema_with_fallback`) and reproducing it directly: the schema-fetch call (`client.get_contract_schema_for_code(...)`) raises `UnicodeEncodeError` the instant a contract's source contains ANY non-ASCII character (an em dash, a middle dot, a box-drawing divider, etc.) — and every contract in this repo used exactly those characters throughout its docstrings. `gltest`'s own internal logger, which would have shown this immediately, is `disabled = True` by default (`gltest/logging.py`), which is why it took this long to find. **Fixed**: stripped every non-ASCII character from every file under `contracts/` (README.md/CONTRACTS.md/CLAUDE.md keep their normal typography — they're never sent through this call). A root `conftest.py` now un-disables gltest's logger so a future regression is diagnosable immediately instead of hiding behind the generic `ValueError`. **New rule for every future contract: `contracts/*.py` (including test fixtures) must be pure ASCII.** See CLAUDE.md's "Known blockers" and "Definition of done" for the durable version of this rule, and `DECISIONS.md`'s 2026-07-01 entry for the full story.
+
+Verified with real `gltest` runs, not just `py_compile`: `gltest --network studionet tests/test_mirror_audit.py` (5/5 passed) and `tests/test_semantic_deadman.py` (6/6 passed after one transient DNS-resolution retry).
 
 ## Optional: local network
 
