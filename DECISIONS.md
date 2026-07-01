@@ -56,13 +56,23 @@ necessary before shipping a contract whose entire purpose depends on it.
   A fourth, separate finding while trying to run `gltest` for the first time
   in this repo's history: `gltest.config.yaml`'s `studionet:` key had no
   value, which YAML parses as `null`, but gltest requires every network entry
-  to be a dict — fixed to `studionet: {}`. Deeper problem, NOT fixed: gltest's
-  own `default_account`/`accounts` fixtures generate a fresh, unfunded keypair
-  on every run with no persistence and no studionet auto-funding, so every
-  attempted deploy via `gltest` itself currently fails
-  (`ValueError: Failed to get schema from all clients`) regardless of the
-  contract being tested. This repo's actual verification path remains the
-  live `genlayer` CLI, not `gltest`, until that's resolved.
+  to be a dict — fixed to `studionet: {}`. Deeper problem, NOT fixed, and
+  CORRECTED here after an initial wrong guess: every attempted deploy via
+  `gltest` itself fails with `ValueError: Failed to get schema from all
+  clients (default, hosted studio, and local)`. The first draft of this entry
+  guessed this was because gltest's `default_account` fixture generates a
+  fresh, unfunded keypair with no GEN for gas — Judith corrected this: studionet
+  does not require gas fees at all, and this repo's own `genlayer` CLI account
+  sat at 0 GEN through every successful deploy this session, which already
+  disproved the guess before it was even checked against gltest's source.
+  Reading `gltest/contracts/contract_factory.py::_get_schema_with_fallback`
+  confirms the real mechanism: it fetches the schema from the contract's
+  SOURCE CODE via `get_contract_schema_for_code(...)`, independent of any
+  account balance, tried against three separately-configured clients
+  ("default", "hosted studio", "local") in turn. All three failed here — the
+  actual cause is an unconfirmed client-connectivity/configuration gap in this
+  shell, not a funding gap. This repo's actual verification path remains the
+  live `genlayer` CLI, not `gltest`, until the real cause is found.
 
 **How to apply.** Any future contract using `gl.get_contract_at` for reads can
 now cite this entry as confirmation the read shape works — no need to
@@ -70,9 +80,11 @@ re-isolate that specific question. But: (1) never assume a target implements
 whatever method you call — wrap it, but know the wrap won't always produce a
 clean message; (2) never audit or read from a caller-supplied, unverified
 address without accepting the (unconfirmed but observed) hang risk; (3) don't
-attempt to fix gltest's funding gap as a side quest inside an unrelated
-contract's build — it's a standalone infra task, tracked here and in
-CLAUDE.md's "Known blockers" so it isn't lost.
+attempt to fix gltest's client-connectivity gap as a side quest inside an
+unrelated contract's build — it's a standalone infra task, tracked here and in
+CLAUDE.md's "Known blockers" so it isn't lost; (4) don't assume studionet
+needs GEN/gas for anything other than an actual `payable` value transfer —
+it doesn't, and this repo has now disproven the opposite guess twice.
 
 ---
 
