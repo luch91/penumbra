@@ -100,7 +100,7 @@ penumbra/
     └── test_semantic_deadman.py
 ```
 
-GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs, exactly as the ecosystem's `genlayer-utils` convention does.
+GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs.
 
 ## Build & deploy
 
