@@ -9,25 +9,25 @@ Paste the batch prompt below into Claude Code from the repo root (after `claude`
 ```
 Read CLAUDE.md, README.md, and CONTRACTS.md in full before writing anything —
 CLAUDE.md's "Known blockers & open verification gaps" section is not optional
-reading: it documents seven bugs that passed py_compile cleanly and only broke
+reading: it documents nine bugs that passed py_compile cleanly and only broke
 on a live deploy. Do not reproduce them.
-Then read all five existing built contracts as the style and correctness reference:
+Then read all six existing built contracts as the style and correctness reference:
 contracts/dissensus_oracle.py, contracts/jailbreak_bounty.py,
 contracts/proof_carrying_answer.py, contracts/schelling_resolver.py,
-contracts/semantic_deadman.py. Match their structure, comment density, and
-the deterministic/non-deterministic discipline exactly.
+contracts/semantic_deadman.py, contracts/mirror_audit.py. Match their
+structure, comment density, and the deterministic/non-deterministic
+discipline exactly.
 
-Build the next batch of primitives, one at a time, fully finishing each
-(source + tests + catalog/README status) before starting the next:
+Build the next primitive:
 
-  1. MirrorAudit            (family VI)  — reads another contract via gl.get_contract_at, judges conformance
-  2. ConsensusThermometer   (family VI)  — cheap agreement pre-check, routes to a fallback when low
+  1. ConsensusThermometer   (family VI)  — cheap agreement pre-check, routes to a fallback when low
 
-Both of these depend on gl.get_contract_at, the single least-verified surface
-in the repo (see CLAUDE.md "Known blockers" — "Contract-to-contract calls
-remain completely unexercised"). Build defensively per the MirrorAudit
-instructions below, and treat the first live deploy of either contract as the
-actual test of that surface, not a formality.
+This depends on gl.get_contract_at READS, which are now confirmed live (see
+CLAUDE.md "Known blockers" — cross-contract view() calls return values
+directly, confirmed via MirrorAudit). If ConsensusThermometer also needs
+cross-contract WRITES (.emit()), that half is still completely unverified —
+build it defensively per the MirrorAudit instructions below regardless, and
+treat the first live deploy as the actual test, not a formality.
 
 Use the spec for each in CONTRACTS.md as the contract; do not redesign the
 purpose or the consensus move. Honor every rule in CLAUDE.md, in particular:
@@ -72,28 +72,44 @@ purpose or the consensus move. Honor every rule in CLAUDE.md, in particular:
   decide deliberately what "fetch failed" should mean for the judgment (see
   semantic_deadman.py's judge_liveness() for the reference pattern — a fetch
   failure there is treated as decisive evidence of "not alive").
-- For MirrorAudit, the cross-contract read is the riskiest, least-verified API
-  in this repo. Build it defensively:
-  * Use the UNTYPED proxy form: `gl.get_contract_at(addr).view().method(args)`.
-    Do NOT use the @gl.contract_interface decorator — per the SDK it is pure
-    type-sugar with no runtime effect, so it only adds a way to break.
+- Cross-contract reads (`gl.get_contract_at(addr).view().method(args)`) are now
+  confirmed live: the untyped proxy returns the value DIRECTLY (a plain
+  `str`/`int`, no wrapper) — see MirrorAudit and its isolation test. Still
+  build any cross-contract call defensively:
+  * Use the UNTYPED proxy form. Do NOT use the @gl.contract_interface decorator
+    — per the SDK it is pure type-sugar with no runtime effect.
   * Isolate EVERY cross-contract call in a single private helper, e.g.
     `_read_target(self, addr) -> dict`, so any syntax fix is one line. No other
     method may call the proxy directly.
   * The read is deterministic — do it in the method body, pull the result into a
     local, THEN run the LLM conformance judgment in the nondet block. Never call
     another contract from inside a nondet block.
-  * Tag the proxy line with `# VERIFY:` and wrap the read in try/except that
-    re-raises a clear message ("cross-contract view() shape differs — see
-    Runner verification") so a wrong proxy shape fails loudly, not opaquely.
+  * Wrap the proxy call in try/except — but do NOT assume this produces a clean
+    message for every failure. CONFIRMED LIVE: calling a method the target
+    doesn't implement at all raises an UNCATCHABLE runner-level dispatch fault
+    (`ValueError: call to private method <function
+    Contract.__handle_undefined_method__...>`), not a Python exception your
+    try/except can intercept. The transaction still reverts safely (no
+    corrupted state), just with a raw traceback instead of your message — say
+    so honestly in the docstring rather than claiming the try/except handles it
+    (MirrorAudit's docstring was corrected on exactly this point after live
+    testing disproved the original claim).
+  * Calling `gl.get_contract_at` against an address with no deployed contract
+    at all was observed, informally and not yet confirmed as a general rule,
+    to hang rather than revert (a write transaction that never reached a
+    terminal status). Do not write an automated test around this — a hang
+    would stall the test run — but do not claim an unverified address is safe
+    to audit either.
   * Add a `## Runner verification` section to the docstring listing exactly what
     to confirm in Studio: that `.view().<method>()` returns the value directly
     (not a wrapper), that positional args work, and the symptom if not.
-  * Write an EXTRA isolation test `tests/test_mirror_audit_read.py` that deploys
-    a 3-line stub target contract exposing one view, deploys MirrorAudit, and
-    asserts only that MirrorAudit can read the stub's state. This makes a
-    cross-contract failure pinpoint instantly on studionet instead of hiding
-    inside a conformance-judgment test.
+  * Write an EXTRA isolation test `tests/test_<snake>_read.py` that deploys a
+    tiny stub target contract exposing one view (put it under
+    contracts/fixtures/, not alongside the 20 catalog primitives — see
+    contracts/fixtures/audit_stub_target.py), deploys your contract, and
+    asserts only that it can read the stub's state. This makes a cross-contract
+    failure pinpoint instantly on studionet instead of hiding inside a
+    conformance-judgment test.
 
 For each contract you must produce:
   - contracts/<snake_name>.py with the header line, a module docstring covering
@@ -107,7 +123,7 @@ For each contract you must produce:
 After writing each contract:
 1. Run `python3 -m py_compile contracts/<file>.py` and fix any syntax error.
    This is a necessary gate, not a sufficient one — py_compile passed cleanly
-   on every one of the seven bugs found in the existing built contracts.
+   on every one of the nine bugs found in the existing built contracts.
 2. Live-smoke-test it yourself via the genlayer CLI before moving to the next
    contract: `genlayer deploy --contract contracts/<file>.py --args ...`, then
    `genlayer call`/`genlayer write` its public methods. An account must already
@@ -135,7 +151,7 @@ Use this to build any one primitive from the queue later:
 
 ```
 Read CLAUDE.md (including "Known blockers & open verification gaps") and the
-five built contracts first. Build <NAME> exactly as specified in
+six built contracts first. Build <NAME> exactly as specified in
 CONTRACTS.md (family <N>). Consensus move: <strict_eq | prompt_comparative |
 prompt_non_comparative | run_nondet> — use it and comment why. If it uses
 prompt_comparative with exec_prompt, do NOT pass response_format="json" — plain
@@ -165,12 +181,13 @@ built contracts. Commit as "Penumbra: add <NAME> (<family>)".
 - Don't let it leave a `gl.nondet.web.render`/`.get` call unwrapped in try/except — a fetch failure raises an uncaught exception, not a returned error value.
 
 ## Mark the unverified surfaces (applies to every contract)
-Two API surfaces are not yet confirmed on the runner: cross-contract
-`view()`/`emit()` calls and native value transfer-out. (`gl.nondet.web.*`'s
-return shape on `mode="text"` is now confirmed live via SemanticDeadman — a
-plain `str` — but JS-rendered pages / `mode="html"` remain untested; treat
-those as still open.) Whenever a contract touches one of the two fully-open
-surfaces, require Claude Code to:
+Two API surfaces are not yet confirmed on the runner: cross-contract `.emit()`
+(write) calls and native value transfer-out. (Cross-contract `.view()`
+[reads] and `gl.nondet.web.*`'s return shape on `mode="text"` are now
+confirmed live via MirrorAudit and SemanticDeadman respectively — both plain
+values, no wrapper — but JS-rendered pages / `mode="html"` remain untested;
+treat that as still open too.) Whenever a contract touches one of the
+fully-open surfaces, require Claude Code to:
 1. isolate it in a single private helper,
 2. tag the exact line with `# VERIFY:`,
 3. add a short `## Runner verification` note to the docstring (what to confirm in

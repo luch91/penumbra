@@ -134,12 +134,13 @@ Consensus moves referenced below:
 - **API.** `assess(task) -> route` · `last_probe()`.
 - **Reuse.** Cost control + graceful degradation for any consensus-heavy pipeline.
 
-### 16. MirrorAudit ◻️
+### 16. MirrorAudit ✅ `contracts/mirror_audit.py`
 - **Purpose.** One contract audits another against a behavioral description.
 - **Consensus.** `non_comparative`: target's public state (read via contract-to-contract calls) + spec are the input; validators verify the leader's conformance ruling.
 - **State.** `DynArray[Audit]` (target: Address, conforms: bool, note_hash).
-- **API.** `audit(target, spec) -> conforms: bool` · `history(target)`.
+- **API.** `audit(target, spec) -> conforms: bool` · `history(target)` · `count()` · `get(index)`.
 - **Reuse.** On-chain conformance checks, registry gating, agent-to-agent trust.
+- **Assumption.** Target must expose `status() -> str` (the same canonical-JSON convention every Penumbra contract already follows); see the contract's docstring.
 
 ### 17. EquivalenceRegistry ◻️
 - **Purpose.** Make equivalence principles reusable, named, on-chain objects.

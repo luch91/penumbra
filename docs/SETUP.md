@@ -51,6 +51,11 @@ gltest --network studionet tests/test_dissensus_oracle.py
 
 These tests call live LLMs, so a borderline non-deterministic assertion can occasionally flake — re-run before treating it as a real failure. The structural assertions (preconditions, dedupe, ledger math) are deterministic and should always pass.
 
+**gltest has not been run end-to-end in this repo yet — confirmed live 2026-07-01 while building MirrorAudit.** Two real gaps found:
+- `gltest.config.yaml` had `studionet:` with no value, which YAML parses as `null` — gltest requires every network entry to be a dictionary. **Fixed**: changed to `studionet: {}`.
+- `gltest` also eagerly validates every network block in the config, including unused ones — it errored on a missing `ACCOUNT_PRIVATE_KEY_1` (needed only by `testnet_asimov`) even when running `--network studionet`. Set a placeholder in the environment (or a `.env` file) to get past config validation.
+- **Still unresolved**: `gltest`'s own `accounts`/`default_account` fixtures (`gltest/glchain/account.py`) generate a fresh, unfunded keypair every run via `genlayer_py.create_account()` — with 0 GEN, contract deploys to studionet fail with `ValueError: Failed to get schema from all clients`. There is currently no funded account wired into gltest for this repo. Fixing this needs either a funded private key supplied via `.env`/the config's `accounts:` list, or confirming studionet auto-funds fresh gltest accounts (unconfirmed). Until resolved, this repo's actual verification path remains the live `genlayer` CLI (deploy/call/write), not `gltest` — the test files exist and are believed correct by inspection, but have not themselves been executed successfully against studionet.
+
 ## Optional: local network
 
 Only if you want fully offline / local-LLM testing. Requires Docker Desktop (26+) installed and running, plus the GenLayer CLI.

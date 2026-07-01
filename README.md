@@ -64,7 +64,7 @@ Status legend: ✅ built and live-smoke-tested on studionet (deploy + method cal
 
 ### VI · Reflexion — *contracts that reason about consensus*
 15. ◻️ **ConsensusThermometer** — runs a cheap "would the validators even agree?" pre-check before committing an expensive decision, and routes to a fallback when predicted agreement is low. Self-aware meta-consensus.
-16. ◻️ **MirrorAudit** — given another contract's address and a behavioral spec, reads its public state via contract-to-contract calls and judges via consensus whether it conforms. Contracts auditing contracts.
+16. ✅ **MirrorAudit** — given another contract's address and a behavioral spec, reads its public state via contract-to-contract calls and judges via consensus whether it conforms. Contracts auditing contracts. → `contracts/mirror_audit.py`
 17. ◻️ **EquivalenceRegistry** — named, reusable equivalence principles as first-class on-chain objects other contracts fetch and apply. Composable consensus policy as infrastructure.
 
 ### VII · Chronomancy — *time and liveness, judged*
@@ -91,13 +91,18 @@ penumbra/
 │   ├── jailbreak_bounty.py
 │   ├── proof_carrying_answer.py
 │   ├── schelling_resolver.py
-│   └── semantic_deadman.py
+│   ├── semantic_deadman.py
+│   ├── mirror_audit.py
+│   └── fixtures/              ← test-only stand-ins, not catalog primitives
+│       └── audit_stub_target.py
 └── tests/                     ← gltest integration tests; assert invariants, never LLM strings
     ├── test_dissensus_oracle.py
     ├── test_jailbreak_bounty.py
     ├── test_proof_carrying_answer.py
     ├── test_schelling_resolver.py
-    └── test_semantic_deadman.py
+    ├── test_semantic_deadman.py
+    ├── test_mirror_audit.py
+    └── test_mirror_audit_read.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs.

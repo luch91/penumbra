@@ -7,6 +7,75 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-01 — MirrorAudit: confirmed cross-contract reads, found an uncatchable dispatch fault, and a gltest infra gap
+
+**Decision.** Before writing `MirrorAudit`, ran a live isolation test first
+(same methodology as every other unverified surface in this repo): deployed a
+throwaway stub target contract (`get_label() -> str`, `get_count() -> int`)
+and a probe contract that calls
+`gl.get_contract_at(addr).view().<method>()` against it. Confirmed the untyped
+proxy returns the value DIRECTLY — a plain `str`/`int`, not a wrapper — exactly
+as CLAUDE.md's "Contract-to-contract" convention already assumed but had never
+tested. Built `MirrorAudit` on top of that with `_read_target_status()`
+expecting the target to expose `status() -> str` (an explicit, documented
+assumption, since CONTRACTS.md's one-liner spec doesn't name a method
+convention), and live-tested `audit()` against a real deployed `SemanticDeadman`
+instance with both a true and a deliberately false spec — both judged
+correctly.
+
+**Why.** This is the first time any contract in this repo has actually
+exercised `gl.get_contract_at`, previously flagged as the single
+least-verified surface here. Confirming it live (rather than trusting the SDK
+docs, which have been wrong five separate times already this repo) was
+necessary before shipping a contract whose entire purpose depends on it.
+
+  A second finding, NOT anticipated: auditing a target that does not
+  implement `status()` at all does not surface through the `try/except`
+  wrapped around the proxy call as a clean custom message. It fails as an
+  uncatchable runner-level dispatch fault
+  (`ValueError: call to private method
+  <function Contract.__handle_undefined_method__...>`), raised while GenVM
+  resolves the method against the TARGET's own execution context — a
+  different, less recoverable failure mode than `gl.nondet.web.render`'s
+  catchable `NondetException` (see the entry below). The outcome is still
+  safe (every validator agrees the call errors, the transaction reverts
+  cleanly, `count()` confirmed unchanged afterward), just with an ugly
+  traceback instead of a friendly message. The contract's docstring originally
+  claimed the try/except would handle this cleanly; that claim was corrected
+  the moment live testing proved it false, rather than left in place.
+
+  A third, informal and unconfirmed observation: probing `gl.get_contract_at`
+  against a synthetic address with NO deployed contract at all (not a real
+  target, not even a nonexistent-method case) caused a write transaction to
+  never reach a terminal status — the CLI timed out waiting for `ACCEPTED`.
+  This was not reproduced deliberately enough to treat as a confirmed rule,
+  but it's a real enough signal that "audit an arbitrary, unverified address"
+  should be treated as a possible-hang risk, not just a possible-revert risk,
+  until someone deliberately confirms or refutes it.
+
+  A fourth, separate finding while trying to run `gltest` for the first time
+  in this repo's history: `gltest.config.yaml`'s `studionet:` key had no
+  value, which YAML parses as `null`, but gltest requires every network entry
+  to be a dict — fixed to `studionet: {}`. Deeper problem, NOT fixed: gltest's
+  own `default_account`/`accounts` fixtures generate a fresh, unfunded keypair
+  on every run with no persistence and no studionet auto-funding, so every
+  attempted deploy via `gltest` itself currently fails
+  (`ValueError: Failed to get schema from all clients`) regardless of the
+  contract being tested. This repo's actual verification path remains the
+  live `genlayer` CLI, not `gltest`, until that's resolved.
+
+**How to apply.** Any future contract using `gl.get_contract_at` for reads can
+now cite this entry as confirmation the read shape works — no need to
+re-isolate that specific question. But: (1) never assume a target implements
+whatever method you call — wrap it, but know the wrap won't always produce a
+clean message; (2) never audit or read from a caller-supplied, unverified
+address without accepting the (unconfirmed but observed) hang risk; (3) don't
+attempt to fix gltest's funding gap as a side quest inside an unrelated
+contract's build — it's a standalone infra task, tracked here and in
+CLAUDE.md's "Known blockers" so it isn't lost.
+
+---
+
 ## 2026-07-01 — SemanticDeadman: `gl.message.datetime` doesn't exist on this runner; switched to content-diffing
 
 **Decision.** `SemanticDeadman` was first written to pass `gl.message.datetime`
