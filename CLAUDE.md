@@ -16,11 +16,11 @@ Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) bef
 
 ## The GenLayer API — CURRENT, DEPLOYABLE CONVENTION
 
-Target the `py-genlayer:test` runner with star imports. **Do not migrate to the v0.3 `import genlayer as gl` / `gl.contract.Contract` layout** — it is not what Studio's deployable runner uses here and will break deploys. If you think the SDK changed, check `https://sdk.genlayer.com/main/_static/ai/api.txt` before editing; do not guess.
+Target the `py-genlayer` runner with star imports, **pinned to a runner hash — never a floating tag**. Studionet now matches the Asimov and Bradbury testnets: floating tags (`py-genlayer:test`, `py-genlayer:latest`) are rejected at deploy with `invalid_contract`, because every validator must resolve to the *same* runner binary or consensus breaks. The current single-file pin is `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6` (multi-file contracts use `py-genlayer-multi:...`). Get the authoritative hash from the [Available Runners](https://sdk.genlayer.com/main/impl-spec/appendix/available-runners.html) appendix, and re-read it if a deploy returns `invalid_contract` — runner hashes advance over time. **Do not migrate to the v0.3 `import genlayer as gl` / `gl.contract.Contract` layout** — it is not what Studio's deployable runner uses here and will break deploys. If you think the SDK changed, check `https://sdk.genlayer.com/main/_static/ai/api.txt` before editing; do not guess.
 
 ### Skeleton
 ```python
-# { "Depends": "py-genlayer:test" }
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 from genlayer import *
 import json
 import typing
@@ -47,6 +47,7 @@ class MyPrimitive(gl.Contract):
 ### Storage types (deterministic state)
 - Allowed: `str`, `bool`, `bytes`, `Address`, `u8..u256`, `i8..i256`, `bigint`, `TreeMap[K, V]`, `DynArray[T]`, `Array[T, N]`.
 - **Forbidden:** plain `int`, `list`, `dict`, or un-parameterized generics (`TreeMap` alone). Use `u256`/`bigint`, `DynArray[T]`, `TreeMap[K, V]`.
+- **`TreeMap[str, typing.Any]` used as an ad-hoc "return a dict-like object" builder is broken** — confirmed by testing: `out["field"] = some_str` raises `AttributeError: 'str' object has no attribute 'as_bytes'`. The storage descriptor backing `TreeMap` expects values with `.as_bytes` (`Address`/`bytes`-like); it does not support heterogeneous `Any`-typed scalars, even as a throwaway local (not just as `self.` state). `TreeMap[K, V]` with a single concrete, homogeneous value type (e.g. `TreeMap[Address, u256]`) is unaffected and works fine. **For any read method that needs to return a heterogeneous structure (`status()`, `get()`, etc.), return `str` via `canonical(...)`/`json.dumps(...)`, not `TreeMap`.**
 - Nested records: decorate a dataclass with `@allow_storage`:
   ```python
   from dataclasses import dataclass
@@ -65,6 +66,7 @@ class MyPrimitive(gl.Contract):
 - `@gl.public.write.payable` — can receive value; read it with `gl.message.value`.
 - Message context: `gl.message.sender_address`, `gl.message.value`, `gl.message.origin_address`, `gl.message.contract_address`, `gl.message.chain_id`.
 - **Payouts:** use the pull-payment pattern (credit a `TreeMap[Address, u256]`, withdraw separately). The exact native-transfer-out call is unverified on this runner — leave the marked integration hook and keep the internal ledger authoritative.
+- **`genlayer write` (CLI v0.39.2) cannot send payable value** — its `write.ts` hardcodes `value: 0n` on every call; `--fee-value` only sets the gas/fee deposit, unrelated to `gl.message.value`. Confirmed by testing `JailbreakBounty.fund()`: the call succeeds but `bounty` stays 0. To smoke-test a `.payable` method, use Studio's browser UI (has a dedicated value field) or a raw RPC call — not the CLI.
 
 ### Reverting
 ```python
@@ -79,7 +81,7 @@ def require(cond, msg):
 Any uncaught exception fails the transaction and rolls back.
 
 ### Addresses
-`Address("0x...")` to construct; `.as_hex`, `.as_bytes`, `.as_int`; `Address.ZERO`. Accept user-supplied addresses as `str` and wrap with `Address(...)`.
+`Address("0x...")` to construct; `.as_hex`, `.as_bytes`, `.as_int`. Accept user-supplied addresses as `str` and wrap with `Address(...)`. **`Address.ZERO` is declared in the SDK source but was `AttributeError` on the pinned runner in testing — do not rely on it.** For a zero/null address, construct explicitly: `Address("0x0000000000000000000000000000000000000000")`.
 
 ---
 
@@ -93,6 +95,7 @@ LLM calls and web reads are non-deterministic. They MUST be quarantined inside a
 3. **Canonicalize** any value compared by `strict_eq`: `json.dumps(obj, sort_keys=True, separators=(",",":"))`. Two validators producing the "same" dict must serialize identically.
 4. Floats are fine *inside* a nondet block, but store probabilities/scores as **integers** (e.g. milli-units, `value * 1000`). Deterministic float math is software-emulated and slow; integers never drift.
 5. `gl.nondet.exec_prompt(prompt, response_format="json")` returns a **parsed dict**, not a string.
+6. **`response_format="json"` crashes GenVM when the call sits inside `gl.eq_principle.prompt_comparative`** — confirmed by isolation testing on the pinned runner (raw `INTERNAL_ERROR`/VM fault, not a Python exception, reproducible). Inside a `prompt_comparative`-wrapped inner function, call `gl.nondet.exec_prompt(prompt)` with **plain text** instead, instruct the model to return JSON in the prompt text, and parse the response yourself (tolerate markdown code fences — strip ```` ``` ```` and locate the outermost `{...}` before `json.loads`). This is untested with `strict_eq` / `prompt_non_comparative`; the failure is specific to the `prompt_comparative` combination as verified.
 
 **Correct shape:**
 ```python
@@ -147,6 +150,23 @@ Rules:
 
 ---
 
+## Known blockers & open verification gaps
+
+Everything below was found by live-deploying the three flagships to studionet via the CLI in a real smoke-test session — not just `python3 -m py_compile`. Read this before assuming an untested pattern "should" work; the SDK docs and this file's own prior guidance were wrong on three separate points below.
+
+**Fixed and reverified end-to-end (safe to build on):**
+- GenVM's runner-comment parser concatenates every consecutive `#`-comment line after the `Depends` pragma into one blob before JSON-parsing it — a multi-line `#`-comment header (the box-drawn doc-comment style used in early drafts of these contracts) corrupts that parse and fails deploy with `invalid_contract`/`absent_runner_comment`. Fixed in all three flagships by moving documentation into a real module docstring. **Do this for every new contract** — pragma line, then a docstring, never a second `#` line.
+- `Address.ZERO` is absent on the pinned runner (see "Addresses" above).
+- `TreeMap[str, typing.Any]` as an ad-hoc dict builder is broken (see "Storage types" above).
+- `response_format="json"` inside `gl.eq_principle.prompt_comparative` crashes GenVM with a raw `INTERNAL_ERROR` VM fault — reproduced 3 of 4 attempts, including with the minimum `ensemble_size`, ruling out prompt size as the cause; an isolation test with plain-text `exec_prompt` succeeded cleanly every time. Fixed in `DissensusOracle` and `JailbreakBounty` via `parse_json_response()` (see NON-DETERMINISM rule 6 above). **Untested with `strict_eq` or `prompt_non_comparative`** — the failure is specific to the `prompt_comparative` combination as verified; don't generalize the ban beyond that without testing.
+
+**Still open — do not claim these are verified:**
+- **`JailbreakBounty`'s real attack path has never executed end-to-end.** `fund()`, `status()`, and `attempt()`'s revert guard (`"nothing to win yet"`) are confirmed live. The `adjudicate()` LLM logic now uses the same `parse_json_response` pattern proven working in `DissensusOracle.resolve()`, but the full payable-fund → judge → payout → withdraw flow has never actually run, because of the CLI limitation below. Verify via Studio's browser UI (has a value field) before relying on this contract with real funds.
+- **`genlayer write` (CLI v0.39.2) cannot send payable value at all** — `write.ts` hardcodes `value: 0n`; `--fee-value` is an unrelated gas/fee-deposit concept. There is currently no CLI-only way to smoke-test any `.payable` method.
+- **Contract-to-contract calls (`gl.get_contract_at`) remain completely unexercised.** This was already flagged as the least-verified surface in the repo before this session, and nothing in this session touched it — the untested-surface warning under "Contract-to-contract" above still stands at full strength. Treat every `# VERIFY:`-tagged cross-contract call in future contracts (MirrorAudit, ConsensusThermometer, etc.) as unproven until tested live, the same way the four bugs above were found: by actually deploying and calling, not by reasoning from the docs.
+
+---
+
 ## Toolchain
 
 - **Studio** (`studio.genlayer.com`) — paste a contract, deploy, exercise methods. Fastest feedback; use it to smoke-test before tests.
@@ -181,7 +201,7 @@ def test_x():
 ## Definition of done for a new primitive
 
 A contract is complete only when all of these exist:
-1. `contracts/<snake_name>.py` — header `# { "Depends": "py-genlayer:test" }`, a module docstring covering **purpose · why-this-consensus-move · state design · reuse**, inlined helpers, one `gl.Contract` subclass (PascalCase, matches the catalog name).
+1. `contracts/<snake_name>.py` — header `# { "Depends": "py-genlayer:<pinned-runner-hash>" }` (pin the hash, never a floating tag — see the deployable-convention section), a module docstring covering **purpose · why-this-consensus-move · state design · reuse**, inlined helpers, one `gl.Contract` subclass (PascalCase, matches the catalog name).
 2. `tests/test_<snake_name>.py` — invariant-based gltest tests.
 3. `CONTRACTS.md` — flip the entry from ◻️ to ✅ and link the source.
 4. `README.md` — flip the catalog status to ✅.

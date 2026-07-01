@@ -1,46 +1,45 @@
-# { "Depends": "py-genlayer:test" }
-# ─────────────────────────────────────────────────────────────────────────────
-# PENUMBRA · I. ORACLES OF DOUBT · 01
-#
-# DissensusOracle — an oracle that answers a question AND reports how much it
-# should be trusted, by measuring its own internal disagreement.
-#
-# WHY IT IS UNUSUAL
-#   Every other oracle treats validator disagreement as a failure to be hidden.
-#   This one treats DISAGREEMENT AS THE PRODUCT. It answers a subjective or
-#   contested question and, alongside the answer, exposes a `dissensus` score in
-#   [0,1]: 0 means "every reasonable analyst agrees", 1 means "this is genuinely
-#   contested". Downstream contracts can read that score and refuse to act on
-#   answers that are too close to call. It is an epistemic humility primitive.
-#
-# HOW CONSENSUS IS USED
-#   The non-deterministic block does NOT ask the model for one answer. It asks
-#   for a self-ensemble: K independent expert opinions, then a majority verdict
-#   and the fraction of experts who agreed with it (`agreement`). The contract
-#   stores `dissensus = 1 - agreement`.
-#
-#   Consensus is reached with the COMPARATIVE equivalence principle. Each
-#   validator independently runs the same self-ensemble. The principle requires
-#   that validators agree on (a) the majority verdict and (b) the agreement ratio
-#   to within a tolerance. So two things must hold for a write to land: the model
-#   must reach a verdict, AND independent validators (running different LLMs) must
-#   concur on how *hard* the question was. A question that is hard in an unstable
-#   way — where even the difficulty is unclear — fails consensus and reverts.
-#   That failure is itself meaningful: the oracle declines to speak.
-#
-# STATE DESIGN
-#   A pull-style archive: every resolved question is appended to `records` so the
-#   history of what was asked, what was decided, and how contested it was becomes
-#   a queryable on-chain corpus. `latest` indexes the most recent record id.
-#
-# REUSE
-#   Wrap any high-stakes judgment ("is this transaction fraudulent?", "did the
-#   contractor deliver?") and gate execution on `dissensus < threshold`.
-# ─────────────────────────────────────────────────────────────────────────────
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+"""
+PENUMBRA · I. ORACLES OF DOUBT · 01
+
+DissensusOracle — an oracle that answers a question AND reports how much it
+should be trusted, by measuring its own internal disagreement.
+
+WHY IT IS UNUSUAL
+  Every other oracle treats validator disagreement as a failure to be hidden.
+  This one treats DISAGREEMENT AS THE PRODUCT. It answers a subjective or
+  contested question and, alongside the answer, exposes a `dissensus` score in
+  [0,1]: 0 means "every reasonable analyst agrees", 1 means "this is genuinely
+  contested". Downstream contracts can read that score and refuse to act on
+  answers that are too close to call. It is an epistemic humility primitive.
+
+HOW CONSENSUS IS USED
+  The non-deterministic block does NOT ask the model for one answer. It asks
+  for a self-ensemble: K independent expert opinions, then a majority verdict
+  and the fraction of experts who agreed with it (`agreement`). The contract
+  stores `dissensus = 1 - agreement`.
+
+  Consensus is reached with the COMPARATIVE equivalence principle. Each
+  validator independently runs the same self-ensemble. The principle requires
+  that validators agree on (a) the majority verdict and (b) the agreement ratio
+  to within a tolerance. So two things must hold for a write to land: the model
+  must reach a verdict, AND independent validators (running different LLMs) must
+  concur on how *hard* the question was. A question that is hard in an unstable
+  way — where even the difficulty is unclear — fails consensus and reverts.
+  That failure is itself meaningful: the oracle declines to speak.
+
+STATE DESIGN
+  A pull-style archive: every resolved question is appended to `records` so the
+  history of what was asked, what was decided, and how contested it was becomes
+  a queryable on-chain corpus. `latest` indexes the most recent record id.
+
+REUSE
+  Wrap any high-stakes judgment ("is this transaction fraudulent?", "did the
+  contractor deliver?") and gate execution on `dissensus < threshold`.
+"""
 
 from genlayer import *
 import json
-import typing
 from dataclasses import dataclass
 
 # ── PENUMBRA helpers (copied; see lib/penumbra_consensus.py) ──────────────────
@@ -57,6 +56,22 @@ def require(condition: bool, message: str) -> None:
 
 def canonical(obj) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"))
+
+
+def parse_json_response(text: str) -> dict:
+    # response_format="json" crashes GenVM when combined with prompt_comparative
+    # on this runner (confirmed by isolation testing) — ask the model for JSON as
+    # plain text instead and parse it ourselves, tolerating markdown code fences.
+    t = text.strip()
+    if t.startswith("```"):
+        t = t.strip("`")
+        if t[:4].lower() == "json":
+            t = t[4:]
+        t = t.strip()
+    start, end = t.find("{"), t.rfind("}")
+    if start != -1 and end != -1:
+        t = t[start : end + 1]
+    return json.loads(t)
 # ──────────────────────────────────────────────────────────────────────────────
 
 
@@ -110,7 +125,8 @@ Return ONLY strict JSON, no prose, no markdown:
 }}
 The verdict must be a concrete answer, never "it depends". `agreement` reflects
 genuine spread of expert opinion: near 1.0 only when the answer is clear-cut."""
-            data = gl.nondet.exec_prompt(prompt, response_format="json")
+            raw = gl.nondet.exec_prompt(prompt)
+            data = parse_json_response(raw)
             verdict = str(data["verdict"]).strip().lower()
             agreement = float(data["agreement"])
             agreement = max(0.0, min(1.0, agreement))
@@ -153,18 +169,20 @@ genuine spread of expert opinion: near 1.0 only when the answer is clear-cut."""
         return len(self.records)
 
     @gl.public.view
-    def get(self, record_id: int) -> TreeMap[str, typing.Any]:
+    def get(self, record_id: int) -> str:
         require(0 <= record_id < len(self.records), "no such record")
         r = self.records[record_id]
-        out: TreeMap[str, typing.Any] = TreeMap()
-        out["question"] = r.question
-        out["verdict"] = r.verdict
-        out["dissensus_milli"] = int(r.dissensus_milli)
-        out["sample_size"] = int(r.sample_size)
-        return out
+        return canonical(
+            {
+                "question": r.question,
+                "verdict": r.verdict,
+                "dissensus_milli": int(r.dissensus_milli),
+                "sample_size": int(r.sample_size),
+            }
+        )
 
     @gl.public.view
-    def latest_verdict(self) -> TreeMap[str, typing.Any]:
+    def latest_verdict(self) -> str:
         require(len(self.records) > 0, "no records yet")
         return self.get(int(self.latest))
 

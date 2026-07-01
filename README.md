@@ -100,7 +100,7 @@ GenLayer contracts run as a single Python file inside the GenVM — there is no 
 
 ## Build & deploy
 
-Every contract targets the current `py-genlayer:test` runner and the live SDK surface (`gl.eq_principle.*`, `gl.nondet.*`, `TreeMap`/`DynArray`, `@gl.public.write.payable`, `gl.message`).
+Every contract targets the `py-genlayer` runner — **pinned to a runner hash**, since floating tags like `py-genlayer:test` are rejected at deploy — and the live SDK surface (`gl.eq_principle.*`, `gl.nondet.*`, `TreeMap`/`DynArray`, `@gl.public.write.payable`, `gl.message`).
 
 - **Studio:** open [studio.genlayer.com](https://studio.genlayer.com), paste a contract, deploy, and exercise the read/write methods. Recommended first run.
 - **CLI:** `genlayer deploy --contract contracts/dissensus_oracle.py --args 7 250`

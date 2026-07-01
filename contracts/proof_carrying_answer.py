@@ -1,46 +1,45 @@
-# { "Depends": "py-genlayer:test" }
-# ─────────────────────────────────────────────────────────────────────────────
-# PENUMBRA · II. ASYMMETRIC RITES · 03
-#
-# ProofCarryingAnswer — submit a claim together with the reasoning that backs it.
-# The network attests the claim only if the proof actually holds. Producing the
-# proof is hard; checking it is cheap. This contract is the cheap half.
-#
-# WHY IT IS UNUSUAL
-#   Most "AI decides X" contracts make every validator redo the full reasoning,
-#   which is slow, costly, and noisy. This contract refuses to do that. It uses
-#   the NON-COMPARATIVE equivalence principle, the one principle where the leader
-#   does the work and the validators ONLY verify integrity. The claim and its
-#   proof are passed in as plain arguments, so every node sees the identical
-#   input — there is nothing to disagree about except whether the proof is sound.
-#   That turns the contract into a trustless verifier for any domain where
-#   "answer + justification" can be checked more easily than it can be produced:
-#   the on-chain analogue of a proof-carrying computation.
-#
-# HOW CONSENSUS IS USED
-#   The non-deterministic block returns the verification INPUT (claim + proof).
-#   The principle's `task` instructs the leader to verify the proof and emit a
-#   structured verdict; the `criteria` tell validators exactly what makes a
-#   verdict trustworthy (every step must follow, the conclusion must match the
-#   claim, no gaps). Validators never re-derive the proof — they audit it. If the
-#   leader's verdict lacks integrity under the criteria, validators vote it down
-#   and the attestation never lands.
-#
-# STATE DESIGN
-#   A content-addressed attestation book. Each accepted claim is appended with
-#   its proof digest and the verdict, building an on-chain ledger of things the
-#   network has checked and stands behind. Rejected claims revert and leave no
-#   trace, so the book contains only attested truth.
-#
-# REUSE
-#   Eligibility proofs ("this address qualifies for the airdrop because …"),
-#   compliance proofs, math/logic lemmas, derivation of a number from a dataset.
-#   Pair it with an off-chain solver that races to produce proofs.
-# ─────────────────────────────────────────────────────────────────────────────
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+"""
+PENUMBRA · II. ASYMMETRIC RITES · 03
+
+ProofCarryingAnswer — submit a claim together with the reasoning that backs it.
+The network attests the claim only if the proof actually holds. Producing the
+proof is hard; checking it is cheap. This contract is the cheap half.
+
+WHY IT IS UNUSUAL
+  Most "AI decides X" contracts make every validator redo the full reasoning,
+  which is slow, costly, and noisy. This contract refuses to do that. It uses
+  the NON-COMPARATIVE equivalence principle, the one principle where the leader
+  does the work and the validators ONLY verify integrity. The claim and its
+  proof are passed in as plain arguments, so every node sees the identical
+  input — there is nothing to disagree about except whether the proof is sound.
+  That turns the contract into a trustless verifier for any domain where
+  "answer + justification" can be checked more easily than it can be produced:
+  the on-chain analogue of a proof-carrying computation.
+
+HOW CONSENSUS IS USED
+  The non-deterministic block returns the verification INPUT (claim + proof).
+  The principle's `task` instructs the leader to verify the proof and emit a
+  structured verdict; the `criteria` tell validators exactly what makes a
+  verdict trustworthy (every step must follow, the conclusion must match the
+  claim, no gaps). Validators never re-derive the proof — they audit it. If the
+  leader's verdict lacks integrity under the criteria, validators vote it down
+  and the attestation never lands.
+
+STATE DESIGN
+  A content-addressed attestation book. Each accepted claim is appended with
+  its proof digest and the verdict, building an on-chain ledger of things the
+  network has checked and stands behind. Rejected claims revert and leave no
+  trace, so the book contains only attested truth.
+
+REUSE
+  Eligibility proofs ("this address qualifies for the airdrop because …"),
+  compliance proofs, math/logic lemmas, derivation of a number from a dataset.
+  Pair it with an off-chain solver that races to produce proofs.
+"""
 
 from genlayer import *
 import json
-import typing
 import hashlib
 from dataclasses import dataclass
 
@@ -139,12 +138,16 @@ class ProofCarryingAnswer(gl.Contract):
         return int(self.seen.get(digest, u256(0))) > 0
 
     @gl.public.view
-    def get(self, index: int) -> TreeMap[str, typing.Any]:
+    def get(self, index: int) -> str:
         require(0 <= index < len(self.attestations), "no such attestation")
         a = self.attestations[index]
-        out: TreeMap[str, typing.Any] = TreeMap()
-        out["claim"] = a.claim
-        out["proof_digest"] = a.proof_digest
-        out["submitter"] = a.submitter.as_hex
-        out["confidence_milli"] = int(a.confidence_milli)
-        return out
+        return json.dumps(
+            {
+                "claim": a.claim,
+                "proof_digest": a.proof_digest,
+                "submitter": a.submitter.as_hex,
+                "confidence_milli": int(a.confidence_milli),
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )

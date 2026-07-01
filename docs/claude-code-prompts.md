@@ -23,8 +23,9 @@ Build the next batch of 4 primitives, one at a time, fully finishing each
 
 Use the spec for each in CONTRACTS.md as the contract; do not redesign the
 purpose or the consensus move. Honor every rule in CLAUDE.md, in particular:
-- Target the py-genlayer:test runner with `from genlayer import *` and
-  `class X(gl.Contract)`. Do NOT use the v0.3 `import genlayer as gl` layout.
+- Target the `py-genlayer` runner pinned to a runner hash (never a floating tag
+  like py-genlayer:test, which is rejected at deploy) with `from genlayer import *`
+  and `class X(gl.Contract)`. Do NOT use the v0.3 `import genlayer as gl` layout.
 - Non-deterministic work goes in an argument-free inner function that never
   touches self/storage; read values into locals first.
 - Canonicalize anything compared by strict_eq; store scores as integer

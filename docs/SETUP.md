@@ -10,13 +10,31 @@ You do **not** need a local network to validate these contracts. Pick the lighte
 | **studionet** | hosted shared network | Python 3.12 + `genlayer-test` | Running the automated gltest suite. |
 | **localnet** | full local network in Docker | Docker 26+, Node 18+, working `genlayer init` | Offline / local-LLM testing. Optional — skip unless you need it. |
 
+## Runner pinning (read this first)
+
+Each contract's first line pins the GenVM runner **by hash**, not by a floating tag:
+
+```
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+```
+
+Studionet, Asimov, and Bradbury all **reject floating tags** (`py-genlayer:test`, `py-genlayer:latest`) at deploy — every validator must resolve to the same runner binary or consensus breaks. If a deploy fails with `invalid_contract`, the pinned hash has advanced: get the current one from the [Available Runners](https://sdk.genlayer.com/main/impl-spec/appendix/available-runners.html) appendix and update the header. Multi-file contracts use `py-genlayer-multi:...`.
+
 ## Fastest validation (zero install)
 
 1. Open https://studio.genlayer.com
 2. Contracts → paste a file from `contracts/` → Deploy (constructor params are auto-detected).
 3. Call the read/write methods and watch the consensus logs.
 
-Smoke-test the three flagships first: `dissensus_oracle.py` (deploy `7, 250`; `resolve("Is water wet?")`), `jailbreak_bounty.py` (deploy with a rule; `fund()` with value; `attempt("hello")`), `proof_carrying_answer.py` (`attest` a sound proof, then a bogus one). This confirms the surfaces tagged `# VERIFY:` in the source.
+Smoke-test the three flagships first: `dissensus_oracle.py` (deploy `7, 250`; `resolve("Is water wet?")`), `jailbreak_bounty.py` (deploy with a rule; `fund()` with value; `attempt("hello")`), `proof_carrying_answer.py` (`attest` a sound proof, then a bogus one).
+
+## CLI smoke-testing
+
+`genlayer deploy --contract contracts/<file>.py --args ...` / `genlayer call <address> <method> --args ...` (read) / `genlayer write <address> <method> --args ...` (write) work directly against studionet once `genlayer init` has been run once and an account is unlocked (`genlayer account unlock`). This is how all four bugs listed under "Known blockers & open verification gaps" in `CLAUDE.md` were actually found — by deploying and calling, not by reading the docs.
+
+**Known CLI gap:** `genlayer write` (v0.39.2) hardcodes `value: 0n` on every call — there is no way to send payable value through it. `--fee-value` is gas/fee deposit, not `gl.message.value`. To smoke-test a `.payable` method (`JailbreakBounty.fund()`), use the browser Studio instead — it has a dedicated value field on write calls.
+
+**Account note:** a fresh account (not the CLI's default `default`/`funded` keystores) may be needed — those can end up locked with a lost password and 0 GEN, in which case `genlayer account create --name <name>` and `genlayer account use <name>` is faster than trying to recover them.
 
 ## Running the test suite (gltest)
 

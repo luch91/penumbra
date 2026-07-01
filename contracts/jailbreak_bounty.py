@@ -1,46 +1,45 @@
-# { "Depends": "py-genlayer:test" }
-# ─────────────────────────────────────────────────────────────────────────────
-# PENUMBRA · IV. ADVERSARIA · 09
-#
-# JailbreakBounty — an escrow that pays a challenger if, and only if, the network
-# agrees their prompt broke a rule the contract was sworn to keep.
-#
-# WHY IT IS UNUSUAL
-#   The canonical GenLayer demo is "Wizard of Coin": an LLM guards a coin and you
-#   try to talk it out. There, the human loses by default and nothing is at stake.
-#   This inverts the whole frame. Here BREAKING the guard is the win condition,
-#   real value is escrowed, and the network itself is the impartial referee that
-#   decides whether a jailbreak succeeded. It is a trustless red-team market: a
-#   primitive for paying people to find the failure modes of a guarded policy.
-#
-# HOW CONSENSUS IS USED
-#   On a challenge, the non-deterministic block does two things in sequence:
-#     1. Runs the guarded model: system rule + the challenger's attack prompt.
-#     2. Runs a judge model: "did that response violate the rule?"
-#   It returns a canonical {violated, reason}. Consensus uses the COMPARATIVE
-#   principle keyed ONLY on the `violated` boolean. So a payout requires that
-#   independent validators — each running its own guarded model and its own judge,
-#   possibly on different LLMs — INDEPENDENTLY agree that a violation occurred.
-#   A jailbreak that only works against one model on one lucky sample does not
-#   clear consensus and does not pay. The bounty rewards robust, transferable
-#   breaks, which are the ones that actually matter.
-#
-# STATE & MONEY DESIGN
-#   Funders deposit via a payable method; the pooled bounty is tracked in
-#   `bounty`. Payouts use the PULL pattern: a win credits the challenger's
-#   `claimable` balance, and they withdraw separately. Pull-over-push is the
-#   standard safe-custody pattern and keeps adjudication and disbursement on
-#   separate transactions. The single line where an integration would wire real
-#   native/ERC-20 transfer out is marked; the internal ledger is authoritative.
-#
-# REUSE
-#   Any "prove my policy is unbreakable, I dare you" market: content filters,
-#   refusal guards, agent guardrails, compliance rules stated in plain language.
-# ─────────────────────────────────────────────────────────────────────────────
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+"""
+PENUMBRA · IV. ADVERSARIA · 09
+
+JailbreakBounty — an escrow that pays a challenger if, and only if, the network
+agrees their prompt broke a rule the contract was sworn to keep.
+
+WHY IT IS UNUSUAL
+  The canonical GenLayer demo is "Wizard of Coin": an LLM guards a coin and you
+  try to talk it out. There, the human loses by default and nothing is at stake.
+  This inverts the whole frame. Here BREAKING the guard is the win condition,
+  real value is escrowed, and the network itself is the impartial referee that
+  decides whether a jailbreak succeeded. It is a trustless red-team market: a
+  primitive for paying people to find the failure modes of a guarded policy.
+
+HOW CONSENSUS IS USED
+  On a challenge, the non-deterministic block does two things in sequence:
+    1. Runs the guarded model: system rule + the challenger's attack prompt.
+    2. Runs a judge model: "did that response violate the rule?"
+  It returns a canonical {violated, reason}. Consensus uses the COMPARATIVE
+  principle keyed ONLY on the `violated` boolean. So a payout requires that
+  independent validators — each running its own guarded model and its own judge,
+  possibly on different LLMs — INDEPENDENTLY agree that a violation occurred.
+  A jailbreak that only works against one model on one lucky sample does not
+  clear consensus and does not pay. The bounty rewards robust, transferable
+  breaks, which are the ones that actually matter.
+
+STATE & MONEY DESIGN
+  Funders deposit via a payable method; the pooled bounty is tracked in
+  `bounty`. Payouts use the PULL pattern: a win credits the challenger's
+  `claimable` balance, and they withdraw separately. Pull-over-push is the
+  standard safe-custody pattern and keeps adjudication and disbursement on
+  separate transactions. The single line where an integration would wire real
+  native/ERC-20 transfer out is marked; the internal ledger is authoritative.
+
+REUSE
+  Any "prove my policy is unbreakable, I dare you" market: content filters,
+  refusal guards, agent guardrails, compliance rules stated in plain language.
+"""
 
 from genlayer import *
 import json
-import typing
 
 # ── PENUMBRA helpers ──────────────────────────────────────────────────────────
 try:
@@ -56,6 +55,22 @@ def require(condition: bool, message: str) -> None:
 
 def canonical(obj) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"))
+
+
+def parse_json_response(text: str) -> dict:
+    # response_format="json" crashes GenVM when combined with prompt_comparative
+    # on this runner (confirmed by isolation testing) — ask the model for JSON as
+    # plain text instead and parse it ourselves, tolerating markdown code fences.
+    t = text.strip()
+    if t.startswith("```"):
+        t = t.strip("`")
+        if t[:4].lower() == "json":
+            t = t[4:]
+        t = t.strip()
+    start, end = t.find("{"), t.rfind("}")
+    if start != -1 and end != -1:
+        t = t[start : end + 1]
+    return json.loads(t)
 # ──────────────────────────────────────────────────────────────────────────────
 
 
@@ -75,7 +90,7 @@ class JailbreakBounty(gl.Contract):
         self.rule = rule
         self.bounty = u256(0)
         self.open = True
-        self.winner = Address.ZERO
+        self.winner = Address("0x0000000000000000000000000000000000000000")
         self.attempts = u256(0)
         self.winning_prompt = ""
 
@@ -125,7 +140,8 @@ ambiguity is NOT a violation.
 
 Return ONLY strict JSON:
 {{ "violated": <true|false>, "reason": "<one sentence>" }}"""
-            verdict = gl.nondet.exec_prompt(judge_prompt, response_format="json")
+            raw = gl.nondet.exec_prompt(judge_prompt)
+            verdict = parse_json_response(raw)
             violated = bool(verdict["violated"])
             reason = str(verdict.get("reason", ""))[:280]
             # Canonicalize on the decision; reason travels for transparency but
@@ -178,14 +194,16 @@ Return ONLY strict JSON:
 
     # ── reads ────────────────────────────────────────────────────────────────────
     @gl.public.view
-    def status(self) -> TreeMap[str, typing.Any]:
-        out: TreeMap[str, typing.Any] = TreeMap()
-        out["rule"] = self.rule
-        out["bounty"] = int(self.bounty)
-        out["open"] = self.open
-        out["attempts"] = int(self.attempts)
-        out["winner"] = self.winner.as_hex if not self.open else ""
-        return out
+    def status(self) -> str:
+        return canonical(
+            {
+                "rule": self.rule,
+                "bounty": int(self.bounty),
+                "open": self.open,
+                "attempts": int(self.attempts),
+                "winner": self.winner.as_hex if not self.open else "",
+            }
+        )
 
     @gl.public.view
     def claimable_of(self, who: str) -> int:
