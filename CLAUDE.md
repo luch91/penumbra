@@ -10,7 +10,7 @@ Penumbra is a library of **GenLayer Intelligent Contract primitives** — reusab
 
 Each contract is a standalone `.py` file in `contracts/`, deployable as-is to GenLayer Studio. There is **no package, no shared import at deploy time** — `lib/penumbra_consensus.py` is a copy-paste reference, and each contract inlines the few helpers it needs.
 
-Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the four built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`.
+Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the five built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`, `contracts/semantic_deadman.py`.
 
 ---
 
@@ -161,7 +161,7 @@ Rules:
 
 ## Known blockers & open verification gaps
 
-Everything below was found by live-deploying contracts to studionet via the CLI across two smoke-test sessions — not just `python3 -m py_compile`. Read this before assuming an untested pattern "should" work; the SDK docs and this file's own prior guidance were wrong on five separate points below.
+Everything below was found by live-deploying contracts to studionet via the CLI across three smoke-test sessions — not just `python3 -m py_compile`. Read this before assuming an untested pattern "should" work; the SDK docs and this file's own prior guidance were wrong on seven separate points below.
 
 **Fixed and reverified end-to-end (safe to build on):**
 - GenVM's runner-comment parser concatenates every consecutive `#`-comment line after the `Depends` pragma into one blob before JSON-parsing it — a multi-line `#`-comment header (the box-drawn doc-comment style used in early drafts of these contracts) corrupts that parse and fails deploy with `invalid_contract`/`absent_runner_comment`. Fixed in all three flagships by moving documentation into a real module docstring. **Do this for every new contract** — pragma line, then a docstring, never a second `#` line.
@@ -169,11 +169,13 @@ Everything below was found by live-deploying contracts to studionet via the CLI 
 - `TreeMap[str, typing.Any]` as an ad-hoc dict builder is broken (see "Storage types" above).
 - `response_format="json"` inside `gl.eq_principle.prompt_comparative` crashes GenVM with a raw `INTERNAL_ERROR` VM fault — reproduced 3 of 4 attempts, including with the minimum `ensemble_size`, ruling out prompt size as the cause; an isolation test with plain-text `exec_prompt` succeeded cleanly every time. Fixed in `DissensusOracle` and `JailbreakBounty` via `parse_json_response()` (see NON-DETERMINISM rule 6 above). **Untested with `strict_eq` or `prompt_non_comparative`** — the failure is specific to the `prompt_comparative` combination as verified; don't generalize the ban beyond that without testing.
 - Accepting an `Address` argument via `str` + `Address(who)` crashes when the caller passes a hex-address-shaped value — GenVM auto-decodes it as a native `Address` regardless of the parameter's type hint, and re-wrapping an already-`Address` value crashes on this runner (see "Addresses" above). Found in and fixed for both `JailbreakBounty.claimable_of` and `SchellingResolver.claimable_of`; audited the other two flagships, no other occurrences exist.
+- **`gl.message.datetime` does not exist on this runner** — the SDK's published API text (`sdk.genlayer.com/main/_static/ai/api.txt`) documents `genlayer.message.datetime: str`, but a live isolation probe (a throwaway contract that dumps `dir(gl.message)` and returns it, deployed and read on studionet) confirmed `gl.message` exposes only `chain_id`, `contract_address`, `origin_address`, `sender_address`, `value` — accessing `.datetime` raises `AttributeError: 'MessageType' object has no attribute 'datetime'`. **There is no clock, timestamp, or block-number accessor available at all on this runner.** Any contract needing a notion of elapsed time must find another primitive (e.g. content-diffing — see `SemanticDeadman`, which was redesigned around this exact finding; full reasoning in `DECISIONS.md`).
+- **`gl.nondet.web.render()`/`.get()` raise an uncaught `NondetException` on fetch failure** instead of returning an error value — confirmed live via a deliberately dead URL (`{'causes': ['TLD_FORBIDDEN'], ...}` for a reserved `.invalid` TLD, and the same uncaught-exception path for a resolvable-but-nonexistent `.com` domain). If the nondet closure doesn't wrap the call in `try/except`, the whole transaction aborts instead of treating "source unreachable" as a judgeable outcome. Fixed in `SemanticDeadman.poke()` by catching the exception inside the closure and returning a canonical `{"alive": false, ...}` directly, never reaching the LLM. **Any future contract that calls `gl.nondet.web.*` must do the same** — CorroborationOracle, ProvenanceAttestor, CanaryTripwire, and RealitySettledMarket all touch this surface and need this guard.
 
 **Still open — do not claim these are verified:**
 - **`JailbreakBounty`'s and `SchellingResolver`'s real payable paths have never executed end-to-end.** `JailbreakBounty`: `fund()`, `status()`, and `attempt()`'s revert guard (`"nothing to win yet"`) are confirmed live; the full payable-fund → judge → payout → withdraw flow has not. `SchellingResolver`: every non-payable guard is confirmed live (`resolve()`, `submit()`, `claim()`, `get()`, `winning_indices()` all revert correctly on empty/invalid state), but `submit()` requires a real stake, so the `resolve()` LLM-clustering path has never run. Both are blocked by the CLI limitation below — verify via Studio's browser UI (has a value field) before relying on either contract with real funds.
-- **`genlayer write` (CLI v0.39.2) cannot send payable value at all** — `write.ts` hardcodes `value: 0n`; `--fee-value` is an unrelated gas/fee-deposit concept. There is currently no CLI-only way to smoke-test any `.payable` method.
-- **Contract-to-contract calls (`gl.get_contract_at`) remain completely unexercised.** This was already flagged as the least-verified surface in the repo, and nothing across either session has touched it — the untested-surface warning under "Contract-to-contract" above still stands at full strength. Treat every `# VERIFY:`-tagged cross-contract call in future contracts (MirrorAudit, ConsensusThermometer, etc.) as unproven until tested live, the same way the bugs above were found: by actually deploying and calling, not by reasoning from the docs.
+- **`genlayer write` (CLI v0.39.2) cannot send payable value at all** — `write.ts` hardcodes `value: 0n`; `--fee-value` is an unrelated gas/fee-deposit concept. There is currently no CLI-only way to smoke-test any `.payable` method. (`SemanticDeadman` sidesteps this entirely — its `poke()`/`check_in()` core paths are non-payable and have been fully verified live, including the actual release path against both a live and a deliberately dead source; only its optional `fund()` needs Studio.)
+- **Contract-to-contract calls (`gl.get_contract_at`) remain completely unexercised.** This was already flagged as the least-verified surface in the repo, and nothing across any session has touched it — the untested-surface warning under "Contract-to-contract" above still stands at full strength. Treat every `# VERIFY:`-tagged cross-contract call in future contracts (MirrorAudit, ConsensusThermometer, etc.) as unproven until tested live, the same way the bugs above were found: by actually deploying and calling, not by reasoning from the docs.
 
 ---
 
@@ -221,14 +223,15 @@ Style: keep the deterministic/non-deterministic boundary visually obvious. Comme
 
 ---
 
-## Build queue (remaining 16, fully specified in CONTRACTS.md)
+## Build queue (remaining 15, fully specified in CONTRACTS.md)
 
 Next batch (priority — these show contract-to-contract + self-referential consensus):
 - **MirrorAudit** (VI) — reads another contract's state, judges conformance. Depends on `gl.get_contract_at`, which remains completely unverified — see "Known blockers" above before starting.
 - **ConsensusThermometer** (VI) — predicts validator agreement before committing. Same cross-contract dependency as MirrorAudit.
-- **SemanticDeadman** (VII) — liveness judged from a web source
 
 Then: AmbiguityGuard, PolyglotConsensus, SemanticCommitReveal, IntentLock, SemanticDiffLedger, ConstitutionalContract, AdversarialReview, CorroborationOracle, ProvenanceAttestor, CanaryTripwire, EquivalenceRegistry, EscalatingVerdict, RealitySettledMarket.
+
+Note: CorroborationOracle, ProvenanceAttestor, CanaryTripwire, and RealitySettledMarket all call `gl.nondet.web.*` — wrap every such call in `try/except` inside its nondet closure (see "Known blockers" above, the `NondetException`-on-fetch-failure finding from `SemanticDeadman`).
 
 ## References
 - API (authoritative, machine-readable): https://sdk.genlayer.com/main/_static/ai/api.txt

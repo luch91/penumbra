@@ -9,20 +9,25 @@ Paste the batch prompt below into Claude Code from the repo root (after `claude`
 ```
 Read CLAUDE.md, README.md, and CONTRACTS.md in full before writing anything —
 CLAUDE.md's "Known blockers & open verification gaps" section is not optional
-reading: it documents four bugs that passed py_compile cleanly and only broke
+reading: it documents seven bugs that passed py_compile cleanly and only broke
 on a live deploy. Do not reproduce them.
-Then read all three existing flagships as the style and correctness reference:
+Then read all five existing built contracts as the style and correctness reference:
 contracts/dissensus_oracle.py, contracts/jailbreak_bounty.py,
-contracts/proof_carrying_answer.py. Match their structure, comment density, and
+contracts/proof_carrying_answer.py, contracts/schelling_resolver.py,
+contracts/semantic_deadman.py. Match their structure, comment density, and
 the deterministic/non-deterministic discipline exactly.
 
-Build the next batch of 4 primitives, one at a time, fully finishing each
+Build the next batch of primitives, one at a time, fully finishing each
 (source + tests + catalog/README status) before starting the next:
 
-  1. SchellingResolver      (family IV)  — semantic clustering + focal-point payout
-  2. MirrorAudit            (family VI)  — reads another contract via gl.get_contract_at, judges conformance
-  3. ConsensusThermometer   (family VI)  — cheap agreement pre-check, routes to a fallback when low
-  4. SemanticDeadman        (family VII) — liveness judged from a web source, not a timestamp ping
+  1. MirrorAudit            (family VI)  — reads another contract via gl.get_contract_at, judges conformance
+  2. ConsensusThermometer   (family VI)  — cheap agreement pre-check, routes to a fallback when low
+
+Both of these depend on gl.get_contract_at, the single least-verified surface
+in the repo (see CLAUDE.md "Known blockers" — "Contract-to-contract calls
+remain completely unexercised"). Build defensively per the MirrorAudit
+instructions below, and treat the first live deploy of either contract as the
+actual test of that surface, not a formality.
 
 Use the spec for each in CONTRACTS.md as the contract; do not redesign the
 purpose or the consensus move. Honor every rule in CLAUDE.md, in particular:
@@ -52,6 +57,21 @@ purpose or the consensus move. Honor every rule in CLAUDE.md, in particular:
   markdown code fences); copy the parse_json_response pattern from
   dissensus_oracle.py or jailbreak_bounty.py.
 - Payouts use the pull-payment ledger pattern with the marked native-transfer hook.
+- Do NOT read gl.message.datetime, or assume any clock/timestamp/block-number
+  accessor exists. Confirmed live: this pinned runner's gl.message exposes
+  ONLY chain_id, contract_address, origin_address, sender_address, value —
+  accessing .datetime raises AttributeError, despite being documented in the
+  SDK's own API text. If a contract needs a notion of elapsed time or "has
+  this changed since last observed," use content-diffing (store what was last
+  observed, ask the model whether the fresh fetch has advanced beyond it) —
+  see contracts/semantic_deadman.py for the reference pattern.
+- Any call to gl.nondet.web.render/.get MUST be wrapped in try/except inside
+  its nondet closure. Confirmed live: a fetch failure (dead domain, disallowed
+  TLD, DNS failure) raises an uncaught NondetException rather than returning
+  an error value, which aborts the whole transaction if uncaught. Catch it and
+  decide deliberately what "fetch failed" should mean for the judgment (see
+  semantic_deadman.py's judge_liveness() for the reference pattern — a fetch
+  failure there is treated as decisive evidence of "not alive").
 - For MirrorAudit, the cross-contract read is the riskiest, least-verified API
   in this repo. Build it defensively:
   * Use the UNTYPED proxy form: `gl.get_contract_at(addr).view().method(args)`.
@@ -87,7 +107,7 @@ For each contract you must produce:
 After writing each contract:
 1. Run `python3 -m py_compile contracts/<file>.py` and fix any syntax error.
    This is a necessary gate, not a sufficient one — py_compile passed cleanly
-   on every one of the four bugs found in the first three flagships.
+   on every one of the seven bugs found in the existing built contracts.
 2. Live-smoke-test it yourself via the genlayer CLI before moving to the next
    contract: `genlayer deploy --contract contracts/<file>.py --args ...`, then
    `genlayer call`/`genlayer write` its public methods. An account must already
@@ -99,7 +119,7 @@ After writing each contract:
    (this happened during Penumbra's own smoke testing: all validators agreed
    the contract was invalid, and consensus still "succeeded"). Do not run the
    full gltest suite yourself; the CLI smoke test is enough to catch a broken
-   deploy before it compounds across 4 contracts.
+   deploy before it compounds across contracts.
 
 Work in small commits, one contract per commit, message:
 "Penumbra: add <Name> (<family>)". Show me each file when it's done and pause
@@ -115,18 +135,21 @@ Use this to build any one primitive from the queue later:
 
 ```
 Read CLAUDE.md (including "Known blockers & open verification gaps") and the
-four built contracts first. Build <NAME> exactly as specified in
+five built contracts first. Build <NAME> exactly as specified in
 CONTRACTS.md (family <N>). Consensus move: <strict_eq | prompt_comparative |
 prompt_non_comparative | run_nondet> — use it and comment why. If it uses
 prompt_comparative with exec_prompt, do NOT pass response_format="json" — plain
 text plus manual parsing only (see parse_json_response in dissensus_oracle.py).
 Any read method returning multiple fields must return str via canonical(...),
-never TreeMap[str, typing.Any]. Deliver contracts/<snake>.py +
-tests/test_<snake>.py (invariant-based) and flip its ✅ in CONTRACTS.md and
-README.md. py_compile the file, then live-smoke-test it via `genlayer deploy` /
-`call` / `write` before considering it done — py_compile alone did not catch
-any of the four bugs found in the existing flagships. Commit as
-"Penumbra: add <NAME> (<family>)".
+never TreeMap[str, typing.Any]. Do not read gl.message.datetime (does not
+exist on this runner — see semantic_deadman.py for the content-diffing
+alternative). Wrap any gl.nondet.web.* call in try/except inside its nondet
+closure (fetch failure raises an uncaught NondetException otherwise). Deliver
+contracts/<snake>.py + tests/test_<snake>.py (invariant-based) and flip its ✅
+in CONTRACTS.md and README.md. py_compile the file, then live-smoke-test it
+via `genlayer deploy` / `call` / `write` before considering it done —
+py_compile alone did not catch any of the seven bugs found in the existing
+built contracts. Commit as "Penumbra: add <NAME> (<family>)".
 ```
 
 ---
@@ -136,13 +159,18 @@ any of the four bugs found in the existing flagships. Commit as
 - Don't let it mock the Anthropic/LLM calls in tests — these are live by design.
 - Don't let it weaken a precondition or invariant to make a flaky non-deterministic assertion pass. Re-run instead.
 - Don't let it collapse multiple contracts into one file — one `gl.Contract` per module.
-- Don't let it treat a clean `py_compile` as proof the contract works. Four real bugs in the first three flagships passed `py_compile` and only surfaced on a live deploy — require an actual `genlayer deploy` plus a method call per contract.
+- Don't let it treat a clean `py_compile` as proof the contract works. Seven real bugs in the existing built contracts passed `py_compile` and only surfaced on a live deploy — require an actual `genlayer deploy` plus a method call per contract.
 - Don't let it copy the box-drawn `#`-comment header style from git history or old drafts of the flagships — only the current docstring-based header is deploy-safe.
+- Don't let it assume `gl.message` has a `.datetime`, block number, or any clock — confirmed absent on this runner despite being in the SDK docs.
+- Don't let it leave a `gl.nondet.web.render`/`.get` call unwrapped in try/except — a fetch failure raises an uncaught exception, not a returned error value.
 
 ## Mark the unverified surfaces (applies to every contract)
-Three API surfaces are not yet confirmed on the runner: cross-contract
-`view()`/`emit()` calls, native value transfer-out, and live `gl.nondet.web.*`
-fetch shapes. Whenever a contract touches one, require Claude Code to:
+Two API surfaces are not yet confirmed on the runner: cross-contract
+`view()`/`emit()` calls and native value transfer-out. (`gl.nondet.web.*`'s
+return shape on `mode="text"` is now confirmed live via SemanticDeadman — a
+plain `str` — but JS-rendered pages / `mode="html"` remain untested; treat
+those as still open.) Whenever a contract touches one of the two fully-open
+surfaces, require Claude Code to:
 1. isolate it in a single private helper,
 2. tag the exact line with `# VERIFY:`,
 3. add a short `## Runner verification` note to the docstring (what to confirm in

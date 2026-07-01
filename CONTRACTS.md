@@ -152,11 +152,11 @@ Consensus moves referenced below:
 
 ## VII · Chronomancy
 
-### 18. SemanticDeadman ◻️
+### 18. SemanticDeadman ✅ `contracts/semantic_deadman.py`
 - **Purpose.** A dead-man's switch keyed to *genuine* activity, not a mechanical heartbeat.
 - **Consensus.** `comparative`: validators fetch the liveness source (e.g. a public profile/feed) and agree on whether meaningful recent activity exists.
-- **State.** `owner`, `beneficiary`, `last_alive_ts`, `liveness_url`, `released: bool`.
-- **API.** `check_in()` (owner) · `poke() -> released: bool` · `claim()` (beneficiary).
+- **State.** `owner`, `beneficiary`, `last_alive_snapshot` (LLM-produced activity description; no timestamp — this runner has no clock/`gl.message.datetime`, see CLAUDE.md), `liveness_url`, `liveness_policy`, `treasury`, `released: bool`.
+- **API.** `check_in()` (owner) · `poke() -> released: bool` · `claim()` (beneficiary) · `fund()` (payable).
 - **Reuse.** Inheritance, key-rotation fallback, abandoned-treasury recovery.
 
 ### 19. EscalatingVerdict ◻️

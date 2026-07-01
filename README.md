@@ -68,7 +68,7 @@ Status legend: ✅ built and live-smoke-tested on studionet (deploy + method cal
 17. ◻️ **EquivalenceRegistry** — named, reusable equivalence principles as first-class on-chain objects other contracts fetch and apply. Composable consensus policy as infrastructure.
 
 ### VII · Chronomancy — *time and liveness, judged*
-18. ◻️ **SemanticDeadman** — a dead-man's switch that releases on *semantic* inactivity (no genuine public activity at a source), not just a missed timestamp ping.
+18. ✅ **SemanticDeadman** — a dead-man's switch that releases on *semantic* inactivity (no genuine public activity at a source), not just a missed timestamp ping. → `contracts/semantic_deadman.py`
 19. ◻️ **EscalatingVerdict** — a dispute primitive whose consensus rigor scales with stakes: `strict_eq` for pennies, multi-source non-comparative review for serious money. Tiered, economical consensus.
 
 ### VIII · Markets of Meaning — *economic primitives with judgment baked in*
@@ -90,12 +90,14 @@ penumbra/
 │   ├── dissensus_oracle.py
 │   ├── jailbreak_bounty.py
 │   ├── proof_carrying_answer.py
-│   └── schelling_resolver.py
+│   ├── schelling_resolver.py
+│   └── semantic_deadman.py
 └── tests/                     ← gltest integration tests; assert invariants, never LLM strings
     ├── test_dissensus_oracle.py
     ├── test_jailbreak_bounty.py
     ├── test_proof_carrying_answer.py
-    └── test_schelling_resolver.py
+    ├── test_schelling_resolver.py
+    └── test_semantic_deadman.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs, exactly as the ecosystem's `genlayer-utils` convention does.
