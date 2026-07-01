@@ -7,7 +7,10 @@ Paste the batch prompt below into Claude Code from the repo root (after `claude`
 ## Batch 2 kickoff (paste this)
 
 ```
-Read CLAUDE.md, README.md, and CONTRACTS.md in full before writing anything.
+Read CLAUDE.md, README.md, and CONTRACTS.md in full before writing anything —
+CLAUDE.md's "Known blockers & open verification gaps" section is not optional
+reading: it documents four bugs that passed py_compile cleanly and only broke
+on a live deploy. Do not reproduce them.
 Then read all three existing flagships as the style and correctness reference:
 contracts/dissensus_oracle.py, contracts/jailbreak_bounty.py,
 contracts/proof_carrying_answer.py. Match their structure, comment density, and
@@ -32,6 +35,22 @@ purpose or the consensus move. Honor every rule in CLAUDE.md, in particular:
   milli-units, never floats.
 - Pick the consensus move the spec names and write a comment explaining WHY
   that move (not just what the code does).
+- Header must be the pinned pragma line followed immediately by a real module
+  docstring (triple-quoted), never a run of '#' comment lines. GenVM's parser
+  concatenates every consecutive '#' line after the pragma before JSON-parsing
+  it for Depends — a second '#' line corrupts that parse and fails deploy with
+  invalid_contract/absent_runner_comment. This is the single most likely
+  mistake to reproduce from copying the old flagship style out of git history.
+- Never build TreeMap[str, typing.Any] as an ad-hoc "return a dict" builder for
+  a view method. Its storage descriptor expects .as_bytes-bearing values and
+  crashes on a plain str. Any read method that returns multiple fields (status,
+  get, assess, audit, etc.) must return str via canonical(...)/json.dumps(...).
+- Never pass response_format="json" to gl.nondet.exec_prompt inside a
+  prompt_comparative-wrapped inner function — confirmed to crash GenVM with a
+  raw INTERNAL_ERROR VM fault, reproduced independent of prompt size. Ask the
+  model for JSON as plain text instead and parse it yourself (tolerate
+  markdown code fences); copy the parse_json_response pattern from
+  dissensus_oracle.py or jailbreak_bounty.py.
 - Payouts use the pull-payment ledger pattern with the marked native-transfer hook.
 - For MirrorAudit, the cross-contract read is the riskiest, least-verified API
   in this repo. Build it defensively:
@@ -65,9 +84,22 @@ For each contract you must produce:
     inputs land on the expected side of a threshold). Never assert exact LLM text.
   - flip the entry in CONTRACTS.md and README.md from ◻️ to ✅ and link the source.
 
-After writing each contract, run `python3 -m py_compile contracts/<file>.py` and
-fix any syntax error before moving on. Do not run gltest yourself (it needs a
-live LLM network); I will run it against studionet.
+After writing each contract:
+1. Run `python3 -m py_compile contracts/<file>.py` and fix any syntax error.
+   This is a necessary gate, not a sufficient one — py_compile passed cleanly
+   on every one of the four bugs found in the first three flagships.
+2. Live-smoke-test it yourself via the genlayer CLI before moving to the next
+   contract: `genlayer deploy --contract contracts/<file>.py --args ...`, then
+   `genlayer call`/`genlayer write` its public methods. An account must already
+   be unlocked (check `genlayer account show` first) — do not attempt to
+   recover or guess a keystore password; if none is unlocked, ask rather than
+   creating a new one silently. Confirm `execution_result` is `SUCCESS`, not
+   just that the transaction was `ACCEPTED` — a transaction can reach `ACCEPTED`
+   via validator consensus even when every validator independently errored
+   (this happened during Penumbra's own smoke testing: all validators agreed
+   the contract was invalid, and consensus still "succeeded"). Do not run the
+   full gltest suite yourself; the CLI smoke test is enough to catch a broken
+   deploy before it compounds across 4 contracts.
 
 Work in small commits, one contract per commit, message:
 "Penumbra: add <Name> (<family>)". Show me each file when it's done and pause
@@ -82,12 +114,19 @@ your assumption inline in the docstring rather than asking — keep momentum.
 Use this to build any one primitive from the queue later:
 
 ```
-Read CLAUDE.md and the three flagship contracts first. Build <NAME> exactly as
-specified in CONTRACTS.md (family <N>). Consensus move: <strict_eq |
-prompt_comparative | prompt_non_comparative | run_nondet> — use it and comment
-why. Deliver contracts/<snake>.py + tests/test_<snake>.py (invariant-based) and
-flip its ✅ in CONTRACTS.md and README.md. Honor every non-determinism rule in
-CLAUDE.md, py_compile the file, and commit as "Penumbra: add <NAME> (<family>)".
+Read CLAUDE.md (including "Known blockers & open verification gaps") and the
+three flagship contracts first. Build <NAME> exactly as specified in
+CONTRACTS.md (family <N>). Consensus move: <strict_eq | prompt_comparative |
+prompt_non_comparative | run_nondet> — use it and comment why. If it uses
+prompt_comparative with exec_prompt, do NOT pass response_format="json" — plain
+text plus manual parsing only (see parse_json_response in dissensus_oracle.py).
+Any read method returning multiple fields must return str via canonical(...),
+never TreeMap[str, typing.Any]. Deliver contracts/<snake>.py +
+tests/test_<snake>.py (invariant-based) and flip its ✅ in CONTRACTS.md and
+README.md. py_compile the file, then live-smoke-test it via `genlayer deploy` /
+`call` / `write` before considering it done — py_compile alone did not catch
+any of the four bugs found in the existing flagships. Commit as
+"Penumbra: add <NAME> (<family>)".
 ```
 
 ---
@@ -97,6 +136,8 @@ CLAUDE.md, py_compile the file, and commit as "Penumbra: add <NAME> (<family>)".
 - Don't let it mock the Anthropic/LLM calls in tests — these are live by design.
 - Don't let it weaken a precondition or invariant to make a flaky non-deterministic assertion pass. Re-run instead.
 - Don't let it collapse multiple contracts into one file — one `gl.Contract` per module.
+- Don't let it treat a clean `py_compile` as proof the contract works. Four real bugs in the first three flagships passed `py_compile` and only surfaced on a live deploy — require an actual `genlayer deploy` plus a method call per contract.
+- Don't let it copy the box-drawn `#`-comment header style from git history or old drafts of the flagships — only the current docstring-based header is deploy-safe.
 
 ## Mark the unverified surfaces (applies to every contract)
 Three API surfaces are not yet confirmed on the runner: cross-contract
@@ -108,4 +149,3 @@ fetch shapes. Whenever a contract touches one, require Claude Code to:
    Studio + the symptom if it's wrong),
 so that when Judith runs studionet, any runner-level surprise is one grep away
 and one-line to fix — never buried inside business logic.
-```
