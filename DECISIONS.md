@@ -7,6 +7,108 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-03 — SemanticCommitReveal (III.05) replaces timestamps with a phase state machine and a mutable TreeMap with two append-only DynArrays
+
+**Decision.** Built `SemanticCommitReveal` diverging from CONTRACTS.md's
+spec on two state-shape points while keeping its consensus description
+exactly as written:
+1. No "reveal window timestamps." Phase is an explicit two-state machine
+   (`COMMIT` -> `REVEAL`) advanced by one owner-only deterministic call,
+   `open_reveal_phase()`.
+2. No single `TreeMap[Address, Commit]`. State is two independent,
+   append-only `DynArray` archives (`commits`, `reveals`), each paired with
+   its own `TreeMap[Address, u256]` "1 + index" existence map.
+
+**Why.** (1) CLAUDE.md's "Known blockers" section already confirmed live
+(an isolation probe dumping `dir(gl.message)`) that this runner has NO
+clock, timestamp, or block-number accessor at all -- `gl.message.datetime`
+doesn't exist. `SemanticDeadman` was already redesigned around this exact
+finding; this is the same fix applied to a second primitive. (2) No
+contract in this repo has verified a `TreeMap` keyed to an `@allow_storage`
+dataclass VALUE live (every proven TreeMap use is a scalar `u256`), AND no
+contract has ever written to an existing `DynArray` index
+(`self.arr[i] = x`) -- every DynArray in every flagship is strictly
+append-only. The spec's single mutable record implies both of those at
+once. Rather than combine two unverified patterns, this contract used two
+independently-proven ones: `commits`/`committer_index` mirrors
+ProofCarryingAnswer's `seen` dedupe exactly, and adding a second archive
+(`reveals`/`reveal_index`) mirrors SchellingResolver's
+`submissions`/`winners` split. "Already revealed" is now "does a `reveals`
+entry exist for this address" instead of reading a mutable field back out
+of the original commit.
+
+The consensus-move description in CONTRACTS.md's spec, by contrast, needed
+NO deviation: the deterministic `sha256(intent + salt) == hash` check
+really is what binds the commit phase, and `comparative` really is what
+judges intent-vs-statement, exactly as written. This is unlike
+AmbiguityGuard's and PolyglotConsensus's deviations, which touched the
+consensus move itself -- this one is purely a state-shape substitution.
+
+Live-verified end to end before writing gltest: CLI deploy, `commit()` on a
+sha256 hash (ACCEPTED, all 5 validators AGREE -- fully deterministic, no
+LLM reached), `open_reveal_phase()` (ACCEPTED), `reveal()` with matching
+intent/salt/statement (ACCEPTED, MAJORITY_AGREE via the comparative round),
+then `get_reveal(0)` confirming `accepted: true` with the correct
+statement, `phase_now()` returning `REVEAL`, `count()`/`reveal_count()`
+both `1`. `gltest --network studionet tests/test_semantic_commit_reveal.py`:
+first attempt hit a single `RemoteDisconnected` on a plain `count()` read
+inside an otherwise-passing test (9/10, matching the known transient TLS
+flakiness pattern, not a contract issue -- the LLM reveal in that same test
+had already succeeded before the read failed); full re-run passed 10/10
+cleanly (370.76s), including that exact test on retry.
+
+**How to apply.** Any future primitive whose catalog spec implies "one
+record, updated in place, keyed by address" should default to this
+dual-archive shape (N independent append-only `DynArray`s + `TreeMap[K,
+u256]` index maps, one pair per logical "phase" or "field group" that gets
+written at a different time) rather than attempting in-place `DynArray`
+mutation or a TreeMap of a compound dataclass value, until one of those two
+patterns is actually verified live in this repo.
+
+---
+
+## 2026-07-03 — Remaining-11 build order chosen: proven-pattern primitives first, shared-guard batch second, novel mechanisms last
+
+**Decision.** After PolyglotConsensus shipped, chose this order for the
+remaining primitives rather than the catalog's numeric order: (1) re-verify
+SchellingResolver/ProofCarryingAnswer (debt cleanup, zero design risk), (2)
+finish Semantic Machines (SemanticCommitReveal -> IntentLock ->
+SemanticDiffLedger -> ConstitutionalContract -- all self-contained,
+single-move consensus on patterns already proven), (3) the `gl.nondet.web.*`
+trio (CorroborationOracle, ProvenanceAttestor, CanaryTripwire) as one batch,
+since they share the one known risk (NondetException-on-fetch-failure,
+already guarded in SemanticDeadman) and solving it once pays off three
+times, (4) EscalatingVerdict (orchestrates multiple already-proven moves),
+(5) AdversarialReview and EquivalenceRegistry last among the "new" builds --
+AdversarialReview stages two advocates inside one leader block (nothing in
+the repo does that yet) and EquivalenceRegistry's "other contracts fetch and
+apply" a principle risks needing cross-contract **WRITE** calls, the one
+surface CLAUDE.md still marks completely unexercised, (6) RealitySettledMarket
+absolute last, since it composes AmbiguityGuard's ambiguity-refusal pattern
+with the web-fetch trio's corroboration pattern and benefits most from both
+already being battle-tested.
+
+**Why.** Under the "make no mistakes" directive, front-loading certainty
+matters more than following the catalog's arbitrary numbering. Every
+primitive built so far in this session has needed at least one deliberate
+deviation from its literal one-line CONTRACTS.md spec (see AmbiguityGuard,
+PolyglotConsensus, and SemanticCommitReveal's entries below) precisely
+because the spec describes a product guarantee, not a verified
+implementation. Doing the two riskiest, most novel mechanisms
+(AdversarialReview's dual-advocate staging, EquivalenceRegistry's likely
+cross-contract WRITE need) dead last means eight more contracts' worth of
+precedent will exist by the time either is attempted, instead of hitting
+their design uncertainty early with the least context to resolve it.
+
+**How to apply.** If this order needs to change (e.g. a user explicitly
+wants a specific primitive next), that's fine -- this is a default, not a
+constraint. But absent an explicit request, prefer finishing a family of
+self-contained, single-move primitives before touching cross-contract WRITE
+or multi-agent staging, since those are the two surfaces this repo has the
+least live verification on.
+
+---
+
 ## 2026-07-03 — SchellingResolver and ProofCarryingAnswer re-verified clean; 2026-07-02's TLS flakiness confirmed as a one-session network incident, not a recurring risk
 
 **Decision.** Re-ran `gltest --network studionet` against both suites with no

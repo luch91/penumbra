@@ -47,12 +47,13 @@ Consensus moves referenced below:
 
 ## III · Semantic Machines
 
-### 5. SemanticCommitReveal ◻️
-- **Purpose.** Commit-reveal where a reveal is valid if it *means* the commitment, defeating front-runners who can copy ciphertext but not intent.
-- **Consensus.** `comparative` on (decrypted commit intent) vs (revealed statement) under a "same intent" principle; deterministic hash check still binds the commit phase.
-- **State.** `TreeMap[Address, Commit]` (`hash, opened, intent`), reveal window timestamps.
-- **API.** `commit(hash)` · `reveal(statement, salt) -> bool`.
+### 5. SemanticCommitReveal ✅ `contracts/semantic_commit_reveal.py`
+- **Purpose.** Commit-reveal where a reveal is valid if it *means* the commitment, defeating a dishonest pivot at reveal time -- bind the hash deterministically, but let consensus judge whether the public statement is a faithful instantiation of the privately committed intent.
+- **Consensus.** `comparative` on (decrypted commit intent) vs (revealed statement) under a "same intent" principle, run only after a plain deterministic `sha256(intent + salt) == committed hash` check binds the reveal to the pre-image -- exactly as the spec describes, no deviation on this point.
+- **State.** No reveal-window timestamps (this runner has no clock at all -- see CLAUDE.md); an explicit `COMMIT`/`REVEAL` phase advanced by one owner-only call instead. Two independent append-only `DynArray` archives (`commits`, `reveals`) each paired with a `TreeMap[Address, u256]` "1 + index" existence map, rather than a single mutable `TreeMap[Address, Commit]` -- see the contract's docstring and DECISIONS.md for why.
+- **API.** `commit(hash)` · `open_reveal_phase()` (owner-only) · `reveal(intent, salt, statement) -> bool` · `phase_now()` · `count()` · `reveal_count()` · `get(id)` · `get_reveal(id)` · `commit_of(who)` · `reveal_of(who)` · `has_revealed(who)`.
 - **Reuse.** Sealed-bid auctions and votes where exact wording shouldn't be game-able.
+- **Note.** Reveal is single-shot: consumed (via the `reveals`/`reveal_index` write) regardless of whether the semantic gate accepts, so there is no free retry loop to probe the LLM for wording that slips through.
 
 ### 6. IntentLock ◻️
 - **Purpose.** Access control whose key is a plain-language policy, not an address allow-list.
