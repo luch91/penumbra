@@ -40,7 +40,7 @@ Status legend: ✅ built and live-smoke-tested on studionet (deploy + method cal
 
 ### I · Oracles of Doubt — *disagreement as signal*
 1. ✅ **DissensusOracle** — answers a contested question *and* publishes a `dissensus` score by self-ensembling K expert opinions; the comparative principle forces validators to agree on both the verdict and how hard the question was. Downstream contracts gate on it. → `contracts/dissensus_oracle.py`
-2. ◻️ **AmbiguityGuard** — a wrapper that performs any judgment but writes `ABSTAIN` instead of a verdict when the question is too ambiguous for validators to reliably converge. Consensus-aware refusal.
+2. ✅ **AmbiguityGuard** — a wrapper that performs any judgment but writes `ABSTAIN` instead of a verdict when the question is too ambiguous for validators to reliably converge. Consensus-aware refusal. → `contracts/ambiguity_guard.py`
 
 ### II · Asymmetric Rites — *generate hard, verify cheap*
 3. ✅ **ProofCarryingAnswer** — submit a claim plus the reasoning that backs it; the network attests it only if the proof holds, using the non-comparative principle so validators audit rather than re-derive. → `contracts/proof_carrying_answer.py`
@@ -94,6 +94,7 @@ penumbra/
 │   ├── semantic_deadman.py
 │   ├── mirror_audit.py
 │   ├── consensus_thermometer.py
+│   ├── ambiguity_guard.py
 │   └── fixtures/              ← test-only stand-ins, not catalog primitives
 │       └── audit_stub_target.py
 └── tests/                     ← gltest integration tests; assert invariants, never LLM strings
@@ -104,7 +105,8 @@ penumbra/
     ├── test_semantic_deadman.py
     ├── test_mirror_audit.py
     ├── test_mirror_audit_read.py
-    └── test_consensus_thermometer.py
+    ├── test_consensus_thermometer.py
+    └── test_ambiguity_guard.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs.

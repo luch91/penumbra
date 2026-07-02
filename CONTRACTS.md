@@ -16,12 +16,13 @@ Consensus moves referenced below:
 - **API.** `resolve(question) -> verdict` · `latest_verdict()` · `get(id)` · `is_contested(id, threshold_milli) -> bool`.
 - **Reuse.** Gate any high-stakes judgment: only execute when `dissensus < threshold`.
 
-### 2. AmbiguityGuard ◻️
+### 2. AmbiguityGuard ✅ `contracts/ambiguity_guard.py`
 - **Purpose.** A drop-in wrapper that returns a verdict *or* `ABSTAIN`, never a confident answer to an unanswerable question.
-- **Consensus.** `comparative` with a principle that treats "leader answered X, validator would answer ABSTAIN" as non-equivalent; persistent non-equivalence collapses to a stored `ABSTAIN`.
-- **State.** `last_status` enum-as-string, `abstain_count`, archive of (question, status).
-- **API.** `judge(question, options) -> status` · `did_abstain() -> bool`.
+- **Consensus.** `comparative` on an internal ensemble poll (option + commit_fraction_milli), reusing DissensusOracle's proven pattern; a deterministic threshold on the agreed commit_fraction then decides the stored status. See the contract's docstring for why this deviates from the catalog's literal "let prompt_comparative itself fail to reach consensus" wording -- that mechanism is unverified on this runner, so the proven ensemble trick is reused instead to deliver the same guarantee.
+- **State.** `last_status` enum-as-string, `abstain_count`, archive of (question, status, confidence_milli).
+- **API.** `judge(question, options) -> status` · `did_abstain() -> bool` · `count()` · `get(id)` · `status()`.
 - **Reuse.** Compose in front of governance, liquidation, or moderation calls to force fail-safe behavior under ambiguity.
+- **Note.** `options` is a comma-separated string, not a list -- no contract in this repo has exercised a list-typed calldata argument yet.
 
 ---
 

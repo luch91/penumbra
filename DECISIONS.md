@@ -7,6 +7,59 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-02 — AmbiguityGuard (II.02) reuses DissensusOracle's ensemble trick instead of the catalog's literal "let consensus itself fail" wording
+
+**Decision.** Built `AmbiguityGuard` so the ABSTAIN decision is a
+deterministic threshold compare (`commit_fraction_milli >=
+abstain_threshold_milli`, plus a defensive check that the model's chosen
+option is actually one of the caller-supplied options) run *after*
+`gl.eq_principle.prompt_comparative` has already reached consensus on an
+internal ensemble poll -- not by relying on the runtime itself failing to
+reach consensus when "the leader answers X but a validator would abstain."
+
+**Why.** CONTRACTS.md's spec for this contract (#2) literally describes the
+consensus move as treating "leader answered X, validator would answer
+ABSTAIN" as non-equivalent, with "persistent non-equivalence collapses to a
+stored ABSTAIN." Taken at face value, that requires catching a
+prompt_comparative consensus failure inside the contract and substituting a
+value -- a mechanism no contract in this repo has used or verified, and
+CLAUDE.md is explicit that every other primitive treats persistent
+prompt_comparative disagreement as an ordinary uncaught revert (see
+DissensusOracle, ConsensusThermometer, both confirmed live this way). Rather
+than invent an unverified pattern to match the spec's prose exactly, reused
+DissensusOracle's proven ensemble-poll technique (K independent internal
+opinions, integer milli-unit fraction, comparative principle with a
+tolerance band) and moved the "should this even count as an answer"
+decision to a deterministic post-consensus threshold. This delivers the
+same product guarantee (never a confident answer to an unanswerable
+question) through a path already confirmed to work on this runner.
+
+Also decided `options` is a single comma-separated string parameter, not a
+list -- no contract in this repo has yet exercised a list-typed calldata
+argument, and CLAUDE.md's "Storage types" cautions are specifically about
+untested storage/argument shapes on this runner. Parsing a delimited string
+inside the write method keeps the argument surface inside proven `str`
+territory.
+
+Live-verified end to end before writing gltest: CLI deploy (ACCEPTED), a
+`judge("Is 7 a prime number?", "yes,no")` write (ACCEPTED, 3/5 validators
+AGREE), then `get(0)`/`did_abstain()` reads confirmed the exact expected
+shape (`status: "yes"`, `confidence_milli: 1000`, `did_abstain: false`).
+`gltest --network studionet tests/test_ambiguity_guard.py`: 7/7 passed
+cleanly in one run (343.45s), including both the low- and
+high-abstain-threshold edge-case tests -- no flakes, no retries needed.
+
+**How to apply.** When a future CONTRACTS.md spec's "Consensus" prose
+describes a mechanism this repo hasn't verified (e.g. relying on
+prompt_comparative's own rotation-exhaustion path, or a list-typed calldata
+argument), don't build toward the literal prose -- check whether an already
+-verified pattern (ensemble + threshold, `non_comparative` on
+deterministic input, etc.) delivers the same product guarantee, and
+document the substitution in the contract's docstring like this one does.
+The spec describes behavior, not implementation.
+
+---
+
 ## 2026-07-02 — ConsensusThermometer (VI.15) built self-contained, no cross-contract calls needed
 
 **Decision.** Built `ConsensusThermometer` per its CONTRACTS.md spec exactly:

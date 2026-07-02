@@ -10,7 +10,7 @@ Penumbra is a library of **GenLayer Intelligent Contract primitives** — reusab
 
 Each contract is a standalone `.py` file in `contracts/`, deployable as-is to GenLayer Studio. There is **no package, no shared import at deploy time** — `lib/penumbra_consensus.py` is a copy-paste reference, and each contract inlines the few helpers it needs.
 
-Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the seven built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`, `contracts/semantic_deadman.py`, `contracts/mirror_audit.py`, `contracts/consensus_thermometer.py`.
+Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the eight built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`, `contracts/semantic_deadman.py`, `contracts/mirror_audit.py`, `contracts/consensus_thermometer.py`, `contracts/ambiguity_guard.py`.
 
 ---
 
@@ -231,12 +231,12 @@ Style: keep the deterministic/non-deterministic boundary visually obvious. Comme
 
 ---
 
-## Build queue (remaining 13, fully specified in CONTRACTS.md)
+## Build queue (remaining 12, fully specified in CONTRACTS.md)
 
 Next up:
-- **AmbiguityGuard** (II) — a drop-in wrapper that returns a verdict or `ABSTAIN`, never a confident answer to an unanswerable question. `comparative` with a principle that treats "leader answered X, validator would answer ABSTAIN" as non-equivalent. Self-contained, no cross-contract surface.
+- **PolyglotConsensus** (III) — accepts a claim in any language and reaches agreement on its meaning across translations. `comparative` with a translation-invariant principle. Self-contained, no cross-contract surface. State uses `TreeMap[str, str]` (claim-hash -> normalized proposition) -- straightforward given the "Storage types" rules already documented, no new pattern expected.
 
-Then: PolyglotConsensus, SemanticCommitReveal, IntentLock, SemanticDiffLedger, ConstitutionalContract, AdversarialReview, CorroborationOracle, ProvenanceAttestor, CanaryTripwire, EquivalenceRegistry, EscalatingVerdict, RealitySettledMarket.
+Then: SemanticCommitReveal, IntentLock, SemanticDiffLedger, ConstitutionalContract, AdversarialReview, CorroborationOracle, ProvenanceAttestor, CanaryTripwire, EquivalenceRegistry, EscalatingVerdict, RealitySettledMarket.
 
 Note: CorroborationOracle, ProvenanceAttestor, CanaryTripwire, and RealitySettledMarket all call `gl.nondet.web.*` — wrap every such call in `try/except` inside its nondet closure (see "Known blockers" above, the `NondetException`-on-fetch-failure finding from `SemanticDeadman`).
 
