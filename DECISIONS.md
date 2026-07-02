@@ -7,6 +7,47 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-02 — ConsensusThermometer (VI.15) built self-contained, no cross-contract calls needed
+
+**Decision.** Built `ConsensusThermometer` per its CONTRACTS.md spec exactly:
+`assess(task) -> route` runs a cheap `comparative` probe that predicts (never
+performs) the agreement a full analysis would reach, then a plain
+deterministic threshold compare on the already-agreed
+`predicted_agreement_milli` decides `FULL` vs `DEFERRED`. No
+`gl.get_contract_at` calls of any kind, read or write.
+
+**Why.** CLAUDE.md's build queue entry for this contract (written in an
+earlier session) speculated it might "depend on `gl.get_contract_at` reads"
+and might need to exercise the still-unverified `.emit()` write surface.
+That turned out to be an assumption from the family name ("Reflexion")
+rather than something the actual CONTRACTS.md spec (#15) requires -- the
+spec's State/API/Consensus fields describe a fully self-contained archive
+contract, identical in shape to `DissensusOracle` (same milli-unit
+`comparative` pattern, same `DynArray` + `latest` index archive), just
+predicting agreement instead of measuring it after the fact. Followed the
+formal spec rather than the speculative build-queue note.
+
+Live-verified end to end before writing gltest: CLI deploy (ACCEPTED,
+MAJORITY_AGREE), `assess()` write (ACCEPTED after one round of rotation --
+normal `prompt_comparative` behavior, not a bug), then `last_probe()`/
+`count()` reads confirmed correct shape (`task_hash` a 64-char sha256 hex
+digest, `predicted_agreement_milli` in `[0,1000]`, `routed_to` matching the
+threshold comparison). `gltest --network studionet
+tests/test_consensus_thermometer.py`: 6/6 passed cleanly in one run, no
+network flakiness this time (contrast with the ProofCarryingAnswer/
+SchellingResolver episode earlier the same day).
+
+**How to apply.** Cross-contract `.emit()` writes remain genuinely
+unverified in this repo -- this contract did not end up being the one that
+tests it. The next contract that actually needs a cross-contract write
+(rather than just belonging to a family whose name suggests
+self-reflection) is still the one to confirm that surface first, per
+CLAUDE.md's "Known blockers." Don't infer a contract's technical
+dependencies from its family/thematic grouping in CONTRACTS.md -- read the
+State/API fields, which are the actual spec.
+
+---
+
 ## 2026-07-02 — Full gltest sweep across all 6 contracts: ASCII fix holds, JailbreakBounty payable path confirmed, session hit real network flakiness on 2 suites
 
 **Decision.** Ran `gltest --network studionet` against all six contracts to

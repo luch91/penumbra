@@ -127,12 +127,13 @@ Consensus moves referenced below:
 
 ## VI · Reflexion
 
-### 15. ConsensusThermometer ◻️
+### 15. ConsensusThermometer ✅ `contracts/consensus_thermometer.py`
 - **Purpose.** Predict whether validators would agree *before* paying for an expensive decision; route to fallback when they wouldn't.
 - **Consensus.** A cheap `comparative` probe on a downsampled version of the task; high predicted agreement unlocks the full decision, low agreement stores a `DEFERRED` status for human/appeal handling.
 - **State.** `DynArray[Probe]` (task_hash, predicted_agreement_milli, routed_to).
-- **API.** `assess(task) -> route` · `last_probe()`.
+- **API.** `assess(task) -> route` · `last_probe()` · `count()` · `get(id)`.
 - **Reuse.** Cost control + graceful degradation for any consensus-heavy pipeline.
+- **Note.** Self-contained; no cross-contract calls. The routing decision itself (`FULL`/`DEFERRED`) is a deterministic integer comparison against `threshold_milli`, run only after the comparative principle has already settled on `predicted_agreement_milli` -- no ambiguity left in the routing step.
 
 ### 16. MirrorAudit ✅ `contracts/mirror_audit.py`
 - **Purpose.** One contract audits another against a behavioral description.

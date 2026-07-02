@@ -63,7 +63,7 @@ Status legend: ✅ built and live-smoke-tested on studionet (deploy + method cal
 14. ◻️ **CanaryTripwire** — monitors a web source for a plain-language tripwire and flips state (and can call back another contract) when consensus judges the condition met. An on-chain monitor.
 
 ### VI · Reflexion — *contracts that reason about consensus*
-15. ◻️ **ConsensusThermometer** — runs a cheap "would the validators even agree?" pre-check before committing an expensive decision, and routes to a fallback when predicted agreement is low. Self-aware meta-consensus.
+15. ✅ **ConsensusThermometer** — runs a cheap "would the validators even agree?" pre-check before committing an expensive decision, and routes to a fallback when predicted agreement is low. Self-aware meta-consensus. → `contracts/consensus_thermometer.py`
 16. ✅ **MirrorAudit** — given another contract's address and a behavioral spec, reads its public state via contract-to-contract calls and judges via consensus whether it conforms. Contracts auditing contracts. → `contracts/mirror_audit.py`
 17. ◻️ **EquivalenceRegistry** — named, reusable equivalence principles as first-class on-chain objects other contracts fetch and apply. Composable consensus policy as infrastructure.
 
@@ -93,6 +93,7 @@ penumbra/
 │   ├── schelling_resolver.py
 │   ├── semantic_deadman.py
 │   ├── mirror_audit.py
+│   ├── consensus_thermometer.py
 │   └── fixtures/              ← test-only stand-ins, not catalog primitives
 │       └── audit_stub_target.py
 └── tests/                     ← gltest integration tests; assert invariants, never LLM strings
@@ -102,7 +103,8 @@ penumbra/
     ├── test_schelling_resolver.py
     ├── test_semantic_deadman.py
     ├── test_mirror_audit.py
-    └── test_mirror_audit_read.py
+    ├── test_mirror_audit_read.py
+    └── test_consensus_thermometer.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs.

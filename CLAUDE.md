@@ -10,7 +10,7 @@ Penumbra is a library of **GenLayer Intelligent Contract primitives** — reusab
 
 Each contract is a standalone `.py` file in `contracts/`, deployable as-is to GenLayer Studio. There is **no package, no shared import at deploy time** — `lib/penumbra_consensus.py` is a copy-paste reference, and each contract inlines the few helpers it needs.
 
-Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the six built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`, `contracts/semantic_deadman.py`, `contracts/mirror_audit.py`.
+Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the seven built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`, `contracts/semantic_deadman.py`, `contracts/mirror_audit.py`, `contracts/consensus_thermometer.py`.
 
 ---
 
@@ -181,7 +181,7 @@ Everything below was found by live-deploying contracts to studionet via the CLI 
 - **`ProofCarryingAnswer` could not be re-verified via `gltest` on 2026-07-02** due to the same network flakiness (see below) — 4 attempts, 0 clean passes (1 test passed on one attempt, isolated). Its ASCII-fix status from the original two-contract verification pass (`MirrorAudit`, `SemanticDeadman`) is not itself in doubt, but this specific suite needs re-running in a future session once network conditions are stable.
 - **Session-level network/TLS flakiness observed 2026-07-02, distinct from the DNS-resolution blips noted elsewhere**: `gltest` runs against `ProofCarryingAnswer` and `SchellingResolver` intermittently failed with a family of TLS errors (`SSLV3_ALERT_ILLEGAL_PARAMETER`, `SSLV3_ALERT_BAD_RECORD_MAC`, `[SSL] record layer failure`, `RemoteDisconnected`) against `studio.genlayer.com`, evidently connection-reuse/keep-alive related under `gltest`'s rapid polling loop. Confirmed NOT a hard outage or code issue: a single raw `requests.post()` to the same endpoint succeeded cleanly mid-episode, `DissensusOracle` and `JailbreakBounty` both ran fully clean immediately before the flaky window started, and a subset of tests within the affected suites (2/7 `SchellingResolver`, 1/4 `ProofCarryingAnswer` on one attempt) also passed cleanly during it. If a future `gltest` run hits this pattern, retry once or twice — don't treat it as a contract regression, but also don't retry indefinitely; if it persists across a whole session, note it and move on rather than burning cycles.
 - **`genlayer write` (CLI v0.39.2) cannot send payable value at all** — `write.ts` hardcodes `value: 0n`; `--fee-value` is an unrelated gas/fee-deposit concept. There is currently no CLI-only way to smoke-test any `.payable` method via the raw CLI (use `gltest`'s `.transact(value=N)` instead, or Studio's browser UI which has a dedicated value field). (`SemanticDeadman` sidesteps this entirely — its `poke()`/`check_in()` core paths are non-payable and have been fully verified live, including the actual release path against both a live and a deliberately dead source; only its optional `fund()` needs Studio or `gltest`.)
-- **Cross-contract WRITE calls (`gl.get_contract_at(addr).emit()...`) remain completely unexercised.** Only the read half (`.view()`) is confirmed (see above). `ConsensusThermometer` or a future contract must confirm `.emit()`'s shape separately before it's treated as safe.
+- **Cross-contract WRITE calls (`gl.get_contract_at(addr).emit()...`) remain completely unexercised.** Only the read half (`.view()`) is confirmed (see above). `ConsensusThermometer` turned out to be self-contained (per its CONTRACTS.md spec, no cross-contract calls at all -- the FULL/DEFERRED routing decision is a plain deterministic threshold compare against the already-agreed `predicted_agreement_milli`), so it did not end up exercising this surface. A future contract that genuinely needs `.emit()` must confirm its shape separately before it's treated as safe.
 - **Calling `gl.get_contract_at` on an address with no deployed contract code at all appears to hang rather than revert.** Observed once, informally, while probing an isolation contract with a synthetic invalid address (not a real deployed contract): the write transaction never reached a terminal status and the CLI timed out waiting for `ACCEPTED`. This is distinct from — and possibly worse than — the clean "target lacks this method" revert above. Not reproduced deliberately or confirmed as a general rule; treat "audit an arbitrary, unverified address" as a real risk (possible hang, not just a revert) until this is tested properly, and do not write an automated test around it (a hang would stall the test run).
 
 ---
@@ -231,12 +231,12 @@ Style: keep the deterministic/non-deterministic boundary visually obvious. Comme
 
 ---
 
-## Build queue (remaining 14, fully specified in CONTRACTS.md)
+## Build queue (remaining 13, fully specified in CONTRACTS.md)
 
 Next up:
-- **ConsensusThermometer** (VI) — predicts validator agreement before committing. Depends on `gl.get_contract_at` reads, which are now confirmed live (see "Known blockers" above) — but if it needs cross-contract WRITES (`.emit()`), that half is still unverified and must be tested the same way.
+- **AmbiguityGuard** (II) — a drop-in wrapper that returns a verdict or `ABSTAIN`, never a confident answer to an unanswerable question. `comparative` with a principle that treats "leader answered X, validator would answer ABSTAIN" as non-equivalent. Self-contained, no cross-contract surface.
 
-Then: AmbiguityGuard, PolyglotConsensus, SemanticCommitReveal, IntentLock, SemanticDiffLedger, ConstitutionalContract, AdversarialReview, CorroborationOracle, ProvenanceAttestor, CanaryTripwire, EquivalenceRegistry, EscalatingVerdict, RealitySettledMarket.
+Then: PolyglotConsensus, SemanticCommitReveal, IntentLock, SemanticDiffLedger, ConstitutionalContract, AdversarialReview, CorroborationOracle, ProvenanceAttestor, CanaryTripwire, EquivalenceRegistry, EscalatingVerdict, RealitySettledMarket.
 
 Note: CorroborationOracle, ProvenanceAttestor, CanaryTripwire, and RealitySettledMarket all call `gl.nondet.web.*` — wrap every such call in `try/except` inside its nondet closure (see "Known blockers" above, the `NondetException`-on-fetch-failure finding from `SemanticDeadman`).
 
