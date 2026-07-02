@@ -7,6 +7,40 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-03 — SchellingResolver and ProofCarryingAnswer re-verified clean; 2026-07-02's TLS flakiness confirmed as a one-session network incident, not a recurring risk
+
+**Decision.** Re-ran `gltest --network studionet` against both suites with no
+code changes. `SchellingResolver`: 7/7 passed (265.06s), including the four
+payable-path tests that had never completed on 2026-07-02
+(`test_focal_cluster_wins_and_pool_splits`, `test_double_resolve_reverts`,
+`test_claim_without_balance_reverts`, `test_resolve_requires_minimum_submissions`).
+`ProofCarryingAnswer`: 4/4 passed (137.28s). Both moved from "Still open" to
+"Fixed and reverified end-to-end" in CLAUDE.md; the standalone "Session-level
+network/TLS flakiness" bullet was removed from CLAUDE.md's "Still open" list
+since it described a resolved, one-time incident rather than a standing risk
+to design around.
+
+**Why.** 2026-07-02's session hit a family of TLS errors
+(`SSLV3_ALERT_ILLEGAL_PARAMETER`, `SSLV3_ALERT_BAD_RECORD_MAC`, `[SSL]
+record layer failure`, `RemoteDisconnected`) against `studio.genlayer.com`
+specifically on these two suites' payable-path tests, while other suites ran
+clean immediately before and after. That session already ruled out a hard
+outage or contract regression (a raw `requests.post()` succeeded mid-episode,
+partial tests within the affected suites passed cleanly during it). This
+session's clean re-run on the first attempt for both suites, with zero
+retries needed, confirms that diagnosis: it was transient
+connection-reuse/keep-alive flakiness under `gltest`'s rapid polling loop,
+not a property of these contracts or of studionet generally.
+
+**How to apply.** If a future `gltest` run against ANY suite in this repo
+hits a burst of TLS/connection errors concentrated on specific tests while
+other suites run clean nearby in time, don't chase a contract-side fix --
+retry the affected suite once or twice first. Only escalate to suspecting a
+real regression if the same suite fails identically on a clean re-run with no
+code changes in between, which has not happened here.
+
+---
+
 ## 2026-07-02 — PolyglotConsensus (II.04) mixes comparative (submit) with non_comparative (same_meaning), diverging from CONTRACTS.md's single-move spec
 
 **Decision.** Built `PolyglotConsensus` with two different consensus moves
