@@ -35,12 +35,13 @@ Consensus moves referenced below:
 - **API.** `attest(claim, proof) -> bool` · `is_attested(claim)` · `get(index)` · `count()`.
 - **Reuse.** Eligibility/compliance proofs, lemmas, dataset-derived figures; pair with an off-chain solver.
 
-### 4. PolyglotConsensus ◻️
+### 4. PolyglotConsensus ✅ `contracts/polyglot_consensus.py`
 - **Purpose.** Accept a claim in any language and reach agreement on its meaning across translations.
-- **Consensus.** `comparative` with a translation-invariant principle ("equivalent if they assert the same proposition regardless of language"). The diverse, multi-model validator set becomes the robustness mechanism rather than a noise source.
-- **State.** Canonical English normalization stored alongside the original; `TreeMap[str, str]` of claim-hash → normalized proposition.
-- **API.** `submit(text) -> proposition_id` · `same_meaning(id_a, id_b) -> bool`.
+- **Consensus.** Two moves, one per write method. `submit()` uses `comparative` with a translation-invariant principle ("equivalent if they assert the same proposition regardless of language") -- the diverse, multi-model validator set becomes the robustness mechanism rather than a noise source. `same_meaning()` uses `non_comparative` instead: by the time two propositions are already stored, the input (two fixed strings from chain state) is identical on every node, so this is the cheaper asymmetric-verify case rather than a second full ensemble round. See the contract's docstring and DECISIONS.md for why this diverges from a single-move spec.
+- **State.** Pull-style `DynArray[Proposition]` archive (`original_text, normalized, detected_language, text_hash`) + `TreeMap[str, u256]` SHA-256 dedupe map (ProofCarryingAnswer's pattern) -- richer than a bare claim-hash -> normalized-proposition map since the API needs sequential integer ids.
+- **API.** `submit(text) -> proposition_id` · `same_meaning(id_a, id_b) -> bool` · `count()` · `get(id)` · `id_for_text(text) -> int` (-1 if never submitted).
 - **Reuse.** Language-agnostic input layer for any multilingual dApp; dedupe submissions that differ only in language.
+- **Note.** Live-verified: submitting "The sky is blue." and its French translation "Le ciel est bleu." normalized to the identical English proposition with `detected_language` "en"/"fr" respectively -- direct confirmation the translation-invariant principle works, not just a syntactic pass.
 
 ---
 

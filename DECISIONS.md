@@ -7,6 +7,64 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-02 — PolyglotConsensus (II.04) mixes comparative (submit) with non_comparative (same_meaning), diverging from CONTRACTS.md's single-move spec
+
+**Decision.** Built `PolyglotConsensus` with two different consensus moves
+for its two write methods, not one:
+- `submit(text)` uses `gl.eq_principle.prompt_comparative` with a
+  translation-invariant principle: each validator independently normalizes
+  the source text to an English proposition, and the principle judges
+  equivalence on asserted meaning (subject/predicate/polarity), not exact
+  wording or source language.
+- `same_meaning(id_a, id_b)` uses `gl.eq_principle.prompt_non_comparative`
+  instead. By the time two propositions are already stored, the input (two
+  fixed English strings read from chain state) is byte-identical on every
+  node -- there's nothing left to disagree about except whether "same
+  meaning" holds, which is exactly the asymmetric-verification case
+  CLAUDE.md recommends `non_comparative` for. Also avoids paying for a
+  second full ensemble/translation round just to compare two already-
+  normalized strings.
+
+Also decided state is a pull-style `DynArray[Proposition]` archive +
+`TreeMap[str, u256]` SHA-256 dedupe map (ProofCarryingAnswer's pattern), not
+the bare `TreeMap[str, str]` claim-hash -> normalized-proposition map
+CONTRACTS.md's one-line spec names.
+
+**Why.** CONTRACTS.md's spec for this contract (#4) only names the
+comparative move and a bare `TreeMap[str, str]`. Neither is sufficient for
+the API the spec itself requires: `submit(text) -> proposition_id` and
+`same_meaning(id_a, id_b)` both need sequential integer handles, which a
+bare hash-keyed TreeMap can't produce, and preserving `original_text` /
+`detected_language` for audit needs more than a single string value. This
+mirrors the same gap found in AmbiguityGuard's spec (see the entry below):
+CONTRACTS.md's one-liners describe product behavior, not a literal
+implementation contract. Reusing DynArray+seen (ProofCarryingAnswer) for
+storage, and non_comparative for same_meaning (ProofCarryingAnswer's
+verification-input pattern again) stays inside proven territory rather than
+inventing new state or consensus shapes.
+
+Live-verified end to end before writing gltest: CLI deploy (ACCEPTED),
+`submit("The sky is blue.")` (ACCEPTED, MAJORITY_AGREE) normalized to
+`{"normalized":"The sky is blue.","detected_language":"en"}`; then
+`submit("Le ciel est bleu.")` (ACCEPTED) normalized to the *identical*
+English proposition `"The sky is blue."` with `detected_language:"fr"` --
+direct live confirmation the translation-invariant principle works, not
+just a syntactic pass. `same_meaning(0, 1)` (ACCEPTED) is the first live
+confirmation in this repo of `prompt_non_comparative` being used purely as
+a judgment call over two already-stored strings, with no new state written.
+`gltest --network studionet tests/test_polyglot_consensus.py`: 9/9 passed
+cleanly in one run (431.07s), no flakes, no retries needed.
+
+**How to apply.** A primitive whose CONTRACTS.md spec names only one
+consensus move may legitimately need a second one for a different method on
+the same contract -- pick the move per call-site based on whether the input
+is fresh model output (comparative/non-comparative leader-does-the-work) or
+already-agreed deterministic chain state (non_comparative is cheaper and
+sufficient). Don't force every write in a contract through the single move
+the one-line spec happens to mention.
+
+---
+
 ## 2026-07-02 — AmbiguityGuard (II.02) reuses DissensusOracle's ensemble trick instead of the catalog's literal "let consensus itself fail" wording
 
 **Decision.** Built `AmbiguityGuard` so the ABSTAIN decision is a

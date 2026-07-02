@@ -44,7 +44,7 @@ Status legend: ✅ built and live-smoke-tested on studionet (deploy + method cal
 
 ### II · Asymmetric Rites — *generate hard, verify cheap*
 3. ✅ **ProofCarryingAnswer** — submit a claim plus the reasoning that backs it; the network attests it only if the proof holds, using the non-comparative principle so validators audit rather than re-derive. → `contracts/proof_carrying_answer.py`
-4. ◻️ **PolyglotConsensus** — accepts a claim in any language; the principle is translation-invariant, so heterogeneous-language validators must agree on *meaning*. Turns the diverse validator set into a feature.
+4. ✅ **PolyglotConsensus** — accepts a claim in any language; the principle is translation-invariant, so heterogeneous-language validators must agree on *meaning*. Turns the diverse validator set into a feature. → `contracts/polyglot_consensus.py`
 
 ### III · Semantic Machines — *state transitions gated by meaning*
 5. ◻️ **SemanticCommitReveal** — commit-reveal where a reveal counts if it *means* the commitment, not if it hashes to it. Fuzzy-intent anti-front-running.
@@ -95,6 +95,7 @@ penumbra/
 │   ├── mirror_audit.py
 │   ├── consensus_thermometer.py
 │   ├── ambiguity_guard.py
+│   ├── polyglot_consensus.py
 │   └── fixtures/              ← test-only stand-ins, not catalog primitives
 │       └── audit_stub_target.py
 └── tests/                     ← gltest integration tests; assert invariants, never LLM strings
@@ -106,7 +107,8 @@ penumbra/
     ├── test_mirror_audit.py
     ├── test_mirror_audit_read.py
     ├── test_consensus_thermometer.py
-    └── test_ambiguity_guard.py
+    ├── test_ambiguity_guard.py
+    └── test_polyglot_consensus.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs.
