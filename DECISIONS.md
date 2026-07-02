@@ -7,6 +7,71 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-02 — Full gltest sweep across all 6 contracts: ASCII fix holds, JailbreakBounty payable path confirmed, session hit real network flakiness on 2 suites
+
+**Decision.** Ran `gltest --network studionet` against all six contracts to
+confirm the 2026-07-01 ASCII fix (see entry below) generalizes across the
+whole repo, per explicit request. Final results:
+
+- `DissensusOracle`: 4/4 PASSED (clean).
+- `MirrorAudit`: 5/5 PASSED + isolation test 1/1 PASSED (verified earlier
+  this session, unchanged).
+- `SemanticDeadman`: 6/6 PASSED (verified earlier this session, unchanged).
+- `JailbreakBounty`: 5/5 PASSED (clean) — **first-ever confirmation of the
+  payable-fund path end-to-end.** `gltest`'s `.transact(value=N)` can send
+  real payable value where the `genlayer` CLI cannot. Confirms `fund()`
+  accepts and accumulates real value, and the owner-reclaim-then-withdraw
+  pull-payment flow works with real funds. The break-to-challenger-payout
+  path remains unconfirmed (no test forces the LLM to judge an attempt as a
+  successful jailbreak).
+- `SchellingResolver`: 2/7 passed cleanly across two full-suite attempts
+  (`test_deploys_empty`, `test_submit_requires_stake` — both deterministic
+  structural tests, confirming no code regression); the other 5, all on the
+  payable/resolve path, were blocked by network flakiness both times. Left
+  open, needs re-running.
+- `ProofCarryingAnswer`: 4 attempts, 0 clean passes (1 test passed on one
+  attempt, isolated) — entirely blocked by network flakiness. Left open,
+  needs re-running.
+
+**Why.** Mid-sweep, `gltest` runs against `ProofCarryingAnswer` and
+`SchellingResolver` started intermittently failing with a family of TLS
+errors (`SSLV3_ALERT_ILLEGAL_PARAMETER`, `SSLV3_ALERT_BAD_RECORD_MAC`,
+`[SSL] record layer failure`, `RemoteDisconnected`) against
+`studio.genlayer.com` — distinct from the DNS-resolution blips noted
+elsewhere in this file. Ruled out as a hard outage or a code regression on
+several grounds: a single raw `requests.post()` to the same endpoint
+succeeded cleanly mid-episode; `DissensusOracle` and `JailbreakBounty` both
+ran fully clean immediately before the flaky window opened; and a subset of
+tests within the affected suites (2/7 `SchellingResolver`, 1/4
+`ProofCarryingAnswer` on one attempt) also passed cleanly during the
+episode. The pattern looks like connection-reuse/keep-alive breakage under
+`gltest`'s rapid polling loop, not a server-side or contract-side problem.
+Retried each blocked suite once or twice (never more, to avoid burning
+cycles chasing a session-local network condition) before deciding to leave
+them open rather than claim false confirmation.
+
+Also confirmed a local environment gotcha along the way: this Bash tool's
+shell does not persist `conda activate genlayer` across tool calls — a
+`gltest` invocation without re-activating in the same command resolves to
+the bare miniconda Python 3.11.4, which fails immediately with
+`ImportError: cannot import name 'Buffer' from 'collections.abc'` (that ABC
+was added in 3.12). Not a gltest or contract bug; just needs
+`source .../conda.sh && conda activate genlayer && gltest ...` in one
+command every time.
+
+**How to apply.** The ASCII fix is now confirmed to generalize across all 6
+contracts, not just the 2 verified on 2026-07-01 — no further action needed
+there. `SchellingResolver` and `ProofCarryingAnswer` need a straight
+re-run of `gltest --network studionet tests/test_schelling_resolver.py` and
+`tests/test_proof_carrying_answer.py` in a future session once network
+conditions are normal; no code changes are indicated by anything seen this
+session. If a future `gltest` run hits the same TLS/connection error family,
+retry once or twice and move on — don't chase it indefinitely, and don't
+mistake it for a contract regression just because a "trivial" structural
+test (like `test_deploys_empty`) happens to be the one that failed first.
+
+---
+
 ## 2026-07-01 — gltest actually works now: root cause was non-ASCII characters, not funding or connectivity
 
 **Decision.** Stripped every non-ASCII character (middle dot `.`, em dash `--`,
