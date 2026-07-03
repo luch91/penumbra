@@ -7,6 +7,66 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-03 — IntentLock (III.06) found and fixed a new empty-string calldata bug; three gltest runs needed for a clean pass, purely from network flakiness
+
+**Decision.** Built `IntentLock` per spec with no state-shape or
+consensus-move deviations (unlike SemanticCommitReveal/AmbiguityGuard/
+PolyglotConsensus) -- `non_comparative` on deterministic `(policy, action)`
+input is exactly what CONTRACTS.md's one-liner describes, and
+`DynArray[Grant]` + `TreeMap[str, u256]` is the same proven archive/dedupe
+idiom used throughout the repo. But live CLI smoke-testing caught a real
+bug: `request(action, nonce)` called via `genlayer write <addr> request
+--args "some action" ""` crashed on every validator with `AttributeError:
+'int' object has no attribute 'strip'` at `nonce.strip()`. The empty-string
+argument was decoded as a non-`str` type, not `""`. Fixed by applying the
+exact same defensive pattern CLAUDE.md already documents for `Address`
+arguments (`addr = who if isinstance(who, Address) else Address(who)`) to
+both `action` and `nonce`: `act = (action if isinstance(action, str) else
+"").strip()`.
+
+**Why.** This is a new instance of a known CLASS of bug (GenVM/CLI doing
+its own type inference on calldata rather than respecting the Python type
+hint), not a new class of bug -- but it had never surfaced before because
+no prior contract accepted a `str` parameter that a legitimate caller (or a
+test asserting a revert-on-empty-input guard) would ever pass as literally
+`""`. `IntentLock`'s nonce is optional-by-design ("empty nonce = no
+one-shot binding"), which is exactly the shape that exposes this. Caught
+early because CLAUDE.md's own testing philosophy (live CLI smoke test
+BEFORE trusting gltest, and always checking `execution_result` rather than
+just `status_name: ACCEPTED`) is what surfaced it: the write showed
+`ACCEPTED`/`MAJORITY_AGREE` (validators unanimously agreeing the call
+errors is still a form of consensus), and only a follow-up `get(0)` read
+reverting with "no such grant" revealed the write hadn't actually
+succeeded. Re-running the identical call with a non-empty nonce (`"abc123"`)
+confirmed the fix was specific to the empty-string case, not a general
+`nonce` handling problem, before touching the contract.
+
+Separately: the first two full `gltest --network studionet
+tests/test_intent_lock.py` runs each had exactly one failure (10/11), never
+the same test twice, and both failures were pure connection-layer errors
+(`RemoteDisconnected` on a `get_policy()` read after a successful deploy;
+`ConnectionAbortedError [WinError 10053]` during a deploy's receipt-polling)
+with zero contract-logic assertion failures across either run. The third
+full run passed 11/11 cleanly (367.60s). This matches the exact
+network-flakiness signature already documented and closed out on
+2026-07-03 for SchellingResolver/ProofCarryingAnswer -- not a new pattern,
+just a recurrence.
+
+**How to apply.** (1) Any future `str` parameter that legitimately accepts
+`""` (an optional field, a sentinel-for-unset convention, or is deliberately
+tested with an empty-input revert case) needs the `isinstance(x, str)`
+defensive coercion, not just parameters that happen to look like addresses.
+(2) When CLI smoke-testing, never trust `status_name: ACCEPTED` /
+"Write operation successfully executed" alone -- always check
+`execution_result` (`SUCCESS` vs `ERROR`) inside the receipt, or read back
+state afterward, before declaring a write verified. (3) A `gltest` run that
+fails exactly one test with a connection-layer exception (not an assertion
+error) is not evidence of a contract bug on its own -- retry up to twice
+before investigating further, consistent with the existing flakiness
+guidance.
+
+---
+
 ## 2026-07-03 — SemanticCommitReveal (III.05) replaces timestamps with a phase state machine and a mutable TreeMap with two append-only DynArrays
 
 **Decision.** Built `SemanticCommitReveal` diverging from CONTRACTS.md's

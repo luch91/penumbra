@@ -10,7 +10,7 @@ Penumbra is a library of **GenLayer Intelligent Contract primitives** — reusab
 
 Each contract is a standalone `.py` file in `contracts/`, deployable as-is to GenLayer Studio. There is **no package, no shared import at deploy time** — `lib/penumbra_consensus.py` is a copy-paste reference, and each contract inlines the few helpers it needs.
 
-Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the ten built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`, `contracts/semantic_deadman.py`, `contracts/mirror_audit.py`, `contracts/consensus_thermometer.py`, `contracts/ambiguity_guard.py`, `contracts/polyglot_consensus.py`, `contracts/semantic_commit_reveal.py`.
+Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the eleven built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`, `contracts/semantic_deadman.py`, `contracts/mirror_audit.py`, `contracts/consensus_thermometer.py`, `contracts/ambiguity_guard.py`, `contracts/polyglot_consensus.py`, `contracts/semantic_commit_reveal.py`, `contracts/intent_lock.py`.
 
 ---
 
@@ -91,6 +91,12 @@ def claimable_of(self, who: Address) -> int:
     return int(self.claimable.get(addr, u256(0)))
 ```
 Found and fixed in both `SchellingResolver.claimable_of` and `JailbreakBounty.claimable_of`. Audit any other method taking an address argument for the same pattern.
+
+**An empty-string `str` calldata argument passed via `genlayer write ... --args`can decode as a non-`str` type (observed: `int`), not `""`.** Confirmed live (2026-07-03): `IntentLock.request(action: str, nonce: str)`, called via `genlayer write <addr> request --args "some action" ""`, crashed on every validator with `AttributeError: 'int' object has no attribute 'strip'` at `n = nonce.strip()` -- the CLI's calldata encoder appears to special-case an empty-string argument the same way GenVM special-cases a hex-address-shaped one (see "Addresses" above), silently ignoring the declared `str` type hint. Confirmed as specific to the empty case, not a general problem with the parameter, by re-sending the identical call with a non-empty nonce (`"abc123"`), which hit `nonce.strip()` with no error (4/6 validators `SUCCESS`, MAJORITY_AGREE; the other 2 were benign `VALIDATOR_QUORUM_REACHED` idles, not related). **Any `str` parameter that a legitimate caller might pass as `""` (an optional field, an "empty means unset" convention, or a deliberate empty-input test case) needs the same defensive coercion as the `Address` pattern above:**
+```python
+act = (action if isinstance(action, str) else "").strip()
+```
+Fixed in `IntentLock.request` for both `action` and `nonce` (the latter is optional-by-design: an empty nonce means "no one-shot binding requested"). **Also note for CLI smoke-testing generally**: `genlayer write`'s `status_name: 'ACCEPTED'` / `"✔ Write operation successfully executed"` only means consensus was REACHED -- it does NOT mean the call succeeded. Validators can unanimously `AGREE` on a deterministic revert or uncaught exception and still show `ACCEPTED`/`MAJORITY_AGREE`. Always check the `execution_result` field inside `consensus_data.leader_receipt` (`'SUCCESS'` vs `'ERROR'`) or read back state afterward before trusting a CLI write actually did what the contract intended -- this was how this bug was caught (a subsequent `get(0)` read reverted with "no such grant" despite the write showing ACCEPTED).
 
 ---
 
@@ -232,12 +238,12 @@ Style: keep the deterministic/non-deterministic boundary visually obvious. Comme
 
 ---
 
-## Build queue (remaining 10, fully specified in CONTRACTS.md)
+## Build queue (remaining 9, fully specified in CONTRACTS.md)
 
 Next up:
-- **IntentLock** (III) — access control by plain-language policy: an action unlocks iff consensus judges it satisfies the policy. `non_comparative`: policy + requested action are deterministic input (both known to every validator up front), validators verify the leader's grant/deny respects the policy -- same shape as ProofCarryingAnswer's verifier pattern. Self-contained, no cross-contract surface expected.
+- **SemanticDiffLedger** (III) — track an evolving document and only bump the version on a *material* change. `comparative` comparing old vs new text under a "materially different?" principle; cosmetic edits are judged equivalent and ignored. Self-contained, no cross-contract surface expected.
 
-Then: SemanticDiffLedger, ConstitutionalContract, CorroborationOracle, ProvenanceAttestor, CanaryTripwire, EscalatingVerdict, AdversarialReview, EquivalenceRegistry, RealitySettledMarket (see DECISIONS.md's ordering rationale: self-contained/proven-pattern primitives first, the shared-guard web-fetch trio as a batch, then the two genuinely novel mechanisms -- AdversarialReview's dual-advocate staging and EquivalenceRegistry's likely cross-contract WRITE need -- last, with RealitySettledMarket composing both AmbiguityGuard and the web-fetch trio's patterns saved for the very end).
+Then: ConstitutionalContract, CorroborationOracle, ProvenanceAttestor, CanaryTripwire, EscalatingVerdict, AdversarialReview, EquivalenceRegistry, RealitySettledMarket (see DECISIONS.md's ordering rationale: self-contained/proven-pattern primitives first, the shared-guard web-fetch trio as a batch, then the two genuinely novel mechanisms -- AdversarialReview's dual-advocate staging and EquivalenceRegistry's likely cross-contract WRITE need -- last, with RealitySettledMarket composing both AmbiguityGuard and the web-fetch trio's patterns saved for the very end).
 
 Note: CorroborationOracle, ProvenanceAttestor, CanaryTripwire, and RealitySettledMarket all call `gl.nondet.web.*` — wrap every such call in `try/except` inside its nondet closure (see "Known blockers" above, the `NondetException`-on-fetch-failure finding from `SemanticDeadman`).
 

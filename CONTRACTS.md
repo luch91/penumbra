@@ -55,12 +55,13 @@ Consensus moves referenced below:
 - **Reuse.** Sealed-bid auctions and votes where exact wording shouldn't be game-able.
 - **Note.** Reveal is single-shot: consumed (via the `reveals`/`reveal_index` write) regardless of whether the semantic gate accepts, so there is no free retry loop to probe the LLM for wording that slips through.
 
-### 6. IntentLock ◻️
+### 6. IntentLock ✅ `contracts/intent_lock.py`
 - **Purpose.** Access control whose key is a plain-language policy, not an address allow-list.
-- **Consensus.** `non_comparative`: policy + requested action are deterministic input; validators verify the leader's grant/deny respects the policy.
-- **State.** `policy: str`, `grants: DynArray[record]`, optional one-shot nonce per grant.
-- **API.** `set_policy(text)` (owner) · `request(action) -> granted: bool`.
+- **Consensus.** `non_comparative`: policy + requested action are deterministic input; validators verify the leader's grant/deny respects the policy, defaulting to deny on any ambiguity.
+- **State.** `policy: str`, `grants: DynArray[Grant]` (every request logged, granted or denied, as an audit trail), `used_nonces: TreeMap[str, u256]` -- the one-shot nonce, keyed on `sha256(requester|action|nonce)`, burned only when a nonce-scoped request is actually granted.
+- **API.** `set_policy(text)` (owner) · `request(action, nonce) -> granted: bool` · `get_policy()` · `count()` · `get(id)` · `last_grant()` · `nonce_used(who, action, nonce)`.
 - **Reuse.** Permissioning for treasury actions, content publishing, agent tool-use.
+- **Note.** Any `str` parameter a caller might legitimately pass as `""` needs the same defensive `isinstance(x, str)` coercion CLAUDE.md documents for `Address` args -- confirmed live: an empty-string CLI arg decoded as a non-`str` type, crashing `nonce.strip()` until fixed. See CLAUDE.md's "Addresses" section.
 
 ### 7. SemanticDiffLedger ◻️
 - **Purpose.** Track an evolving document and only bump the version on *material* change.
