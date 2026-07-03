@@ -63,11 +63,11 @@ Consensus moves referenced below:
 - **Reuse.** Permissioning for treasury actions, content publishing, agent tool-use.
 - **Note.** Any `str` parameter a caller might legitimately pass as `""` needs the same defensive `isinstance(x, str)` coercion CLAUDE.md documents for `Address` args -- confirmed live: an empty-string CLI arg decoded as a non-`str` type, crashing `nonce.strip()` until fixed. See CLAUDE.md's "Addresses" section.
 
-### 7. SemanticDiffLedger ◻️
+### 7. SemanticDiffLedger ✅ `contracts/semantic_diff_ledger.py`
 - **Purpose.** Track an evolving document and only bump the version on *material* change.
-- **Consensus.** `comparative` comparing old vs new under a "materially different?" principle; cosmetic edits are judged equivalent and ignored.
-- **State.** `current: str`, `DynArray[Snapshot]` of material versions, `version: u256`.
-- **API.** `propose(new_text) -> bumped: bool` · `version()` · `snapshot(v)`.
+- **Consensus.** `comparative` comparing old vs new under a "materially different?" principle, with an integer milli-tolerance on confidence (the same idiom as DissensusOracle/PolyglotConsensus); cosmetic edits are judged equivalent and leave state completely untouched -- no snapshot, no version bump, the proposed text is not merged in.
+- **State.** `current: str`, `DynArray[Snapshot]` seeded with the initial text as version 0 (genesis), `doc_version: u256` (named to avoid colliding with the `version()` read method, the same split already used for AmbiguityGuard's `last_status`/`status()`).
+- **API.** `propose(new_text) -> bumped: bool` · `version()` · `get_current()` · `count()` · `snapshot(v)`.
 - **Reuse.** On-chain changelogs, license/terms tracking, spec governance.
 
 ### 8. ConstitutionalContract ◻️

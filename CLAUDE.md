@@ -10,7 +10,7 @@ Penumbra is a library of **GenLayer Intelligent Contract primitives** — reusab
 
 Each contract is a standalone `.py` file in `contracts/`, deployable as-is to GenLayer Studio. There is **no package, no shared import at deploy time** — `lib/penumbra_consensus.py` is a copy-paste reference, and each contract inlines the few helpers it needs.
 
-Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the eleven built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`, `contracts/semantic_deadman.py`, `contracts/mirror_audit.py`, `contracts/consensus_thermometer.py`, `contracts/ambiguity_guard.py`, `contracts/polyglot_consensus.py`, `contracts/semantic_commit_reveal.py`, `contracts/intent_lock.py`.
+Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the twelve built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`, `contracts/semantic_deadman.py`, `contracts/mirror_audit.py`, `contracts/consensus_thermometer.py`, `contracts/ambiguity_guard.py`, `contracts/polyglot_consensus.py`, `contracts/semantic_commit_reveal.py`, `contracts/intent_lock.py`, `contracts/semantic_diff_ledger.py`.
 
 ---
 
@@ -238,12 +238,12 @@ Style: keep the deterministic/non-deterministic boundary visually obvious. Comme
 
 ---
 
-## Build queue (remaining 9, fully specified in CONTRACTS.md)
+## Build queue (remaining 8, fully specified in CONTRACTS.md)
 
 Next up:
-- **SemanticDiffLedger** (III) — track an evolving document and only bump the version on a *material* change. `comparative` comparing old vs new text under a "materially different?" principle; cosmetic edits are judged equivalent and ignored. Self-contained, no cross-contract surface expected.
+- **ConstitutionalContract** (III) — holds a prose constitution with immutable core principles; amendments pass only if consensus judges them consistent with the core. `non_comparative`-shaped verification (core principles + proposed amendment are both deterministic input). Self-contained, no cross-contract surface expected.
 
-Then: ConstitutionalContract, CorroborationOracle, ProvenanceAttestor, CanaryTripwire, EscalatingVerdict, AdversarialReview, EquivalenceRegistry, RealitySettledMarket (see DECISIONS.md's ordering rationale: self-contained/proven-pattern primitives first, the shared-guard web-fetch trio as a batch, then the two genuinely novel mechanisms -- AdversarialReview's dual-advocate staging and EquivalenceRegistry's likely cross-contract WRITE need -- last, with RealitySettledMarket composing both AmbiguityGuard and the web-fetch trio's patterns saved for the very end).
+Then: CorroborationOracle, ProvenanceAttestor, CanaryTripwire, EscalatingVerdict, AdversarialReview, EquivalenceRegistry, RealitySettledMarket (see DECISIONS.md's ordering rationale: self-contained/proven-pattern primitives first, the shared-guard web-fetch trio as a batch, then the two genuinely novel mechanisms -- AdversarialReview's dual-advocate staging and EquivalenceRegistry's likely cross-contract WRITE need -- last, with RealitySettledMarket composing both AmbiguityGuard and the web-fetch trio's patterns saved for the very end).
 
 Note: CorroborationOracle, ProvenanceAttestor, CanaryTripwire, and RealitySettledMarket all call `gl.nondet.web.*` — wrap every such call in `try/except` inside its nondet closure (see "Known blockers" above, the `NondetException`-on-fetch-failure finding from `SemanticDeadman`).
 

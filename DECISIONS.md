@@ -7,6 +7,51 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-03 — SemanticDiffLedger (III.07) uses comparative even though both compared texts are deterministic input, unlike IntentLock
+
+**Decision.** Built `SemanticDiffLedger.propose()` with the `comparative`
+equivalence principle CONTRACTS.md's spec names, even though `current`
+(chain state) and `new_text` (calldata) are both deterministic and
+identical on every validator -- the same input shape that led IntentLock's
+`request()` to use `non_comparative` instead. Did not deviate here.
+
+**Why.** The two contracts' judgments differ in kind, not just degree.
+IntentLock's grant/deny call can be checked against explicit, mostly
+mechanical criteria ("does this action satisfy every requirement in this
+policy"), which is exactly the leader-decides/validators-verify shape
+`non_comparative` is for. "Is this edit material or cosmetic" is a more
+open-ended, genuinely interpretive judgment -- closer to DissensusOracle's
+"how contested is this" than to a policy-compliance check. Letting each
+validator independently re-derive the materiality verdict (comparative)
+means real disagreement between different LLMs about whether a change
+matters becomes a visible, meaningful signal (a revert) rather than being
+smoothed over by one leader's opinion merely surviving a criteria check.
+Also matches CONTRACTS.md's literal spec for this contract, so no deviation
+needed to be justified or documented in the contract's own docstring beyond
+explaining the choice.
+
+Live-verified end to end before writing gltest: CLI deploy, `propose()`
+with a starkly material edit (rent doubled, due date moved) -- ACCEPTED,
+MAJORITY_AGREE, `version` correctly bumped 0->1, `current`/`snapshot(1)`
+updated to the new text; then `propose()` with a purely cosmetic edit
+(trailing whitespace only, which normalizes to byte-identical text after
+`.strip()`) -- ACCEPTED, and `version`/`count` confirmed completely
+unchanged (1 and 2 respectively), proving the cosmetic path leaves state
+untouched rather than silently merging the proposed text.
+`gltest --network studionet tests/test_semantic_diff_ledger.py`: 5/5
+passed cleanly on the first attempt (186.51s), no flakiness.
+
+**How to apply.** When a future primitive's spec names a consensus move
+that seems structurally similar to one already built with a *different*
+move (as this looked similar to IntentLock's non_comparative on
+first glance), check whether the JUDGMENT itself is mechanical/
+criteria-checkable (favor non_comparative) or genuinely interpretive/
+contestable (favor comparative) rather than pattern-matching on "both
+inputs are deterministic" alone -- that property alone doesn't decide which
+move fits.
+
+---
+
 ## 2026-07-03 — IntentLock (III.06) found and fixed a new empty-string calldata bug; three gltest runs needed for a clean pass, purely from network flakiness
 
 **Decision.** Built `IntentLock` per spec with no state-shape or
