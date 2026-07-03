@@ -50,7 +50,7 @@ Status legend: ✅ built and live-smoke-tested on studionet (deploy + method cal
 5. ✅ **SemanticCommitReveal** — commit-reveal where a reveal counts if it *means* the commitment, not if it hashes to it. Fuzzy-intent anti-front-running. → `contracts/semantic_commit_reveal.py`
 6. ✅ **IntentLock** — access control by plain-language policy: an action unlocks iff consensus judges it satisfies the policy. A semantic ACL. → `contracts/intent_lock.py`
 7. ✅ **SemanticDiffLedger** — versioned document where consensus decides which edits are *material* vs cosmetic; only material edits bump the version. Meaning-gated version control. → `contracts/semantic_diff_ledger.py`
-8. ◻️ **ConstitutionalContract** — holds a prose constitution with immutable core principles; amendments pass only if consensus judges them consistent with the core. Governance as machine-adjudicated consistency.
+8. ✅ **ConstitutionalContract** — holds a prose constitution with immutable core principles; amendments pass only if consensus judges them consistent with the core. Governance as machine-adjudicated consistency. → `contracts/constitutional_contract.py`
 
 ### IV · Adversaria — *consensus as referee in a game*
 9. ✅ **JailbreakBounty** — escrow that pays a challenger iff independent validators agree their prompt broke a stated rule. The inverse of Wizard-of-Coin: breaking the guard is the win, and the network is the impartial judge. → `contracts/jailbreak_bounty.py`
@@ -99,6 +99,7 @@ penumbra/
 │   ├── semantic_commit_reveal.py
 │   ├── intent_lock.py
 │   ├── semantic_diff_ledger.py
+│   ├── constitutional_contract.py
 │   └── fixtures/              ← test-only stand-ins, not catalog primitives
 │       └── audit_stub_target.py
 └── tests/                     ← gltest integration tests; assert invariants, never LLM strings
@@ -114,7 +115,8 @@ penumbra/
     ├── test_polyglot_consensus.py
     ├── test_semantic_commit_reveal.py
     ├── test_intent_lock.py
-    └── test_semantic_diff_ledger.py
+    ├── test_semantic_diff_ledger.py
+    └── test_constitutional_contract.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs.

@@ -7,6 +7,55 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-03 — ConstitutionalContract (III.08) makes `core` immutable by simply never writing to it, and reuses AmbiguityGuard's delimited-string workaround for a second list-shaped parameter
+
+**Decision.** Built `ConstitutionalContract` matching CONTRACTS.md's spec
+with no consensus-move deviation (`non_comparative` on deterministic
+`(core_principles, proposed_amendment)` input, the same shape as
+IntentLock's `request()`). Two implementation choices worth recording:
+1. `core: DynArray[str]` is populated once in `__init__` and there is no
+   method anywhere in the contract -- owner-gated or otherwise -- that
+   writes to it again. Immutability here is not a comment or a convention;
+   it's the literal absence of a code path that could mutate it.
+2. The constructor takes `core_principles: str` delimited by `|`, not a
+   `DynArray[str]` argument as the spec's State line implies -- reusing
+   AmbiguityGuard's proven workaround for list-typed calldata (no contract
+   in this repo has ever exercised an actual list argument). Chose `|`
+   instead of AmbiguityGuard's comma because core principles are full
+   sentences that may themselves contain commas, where `options` in
+   AmbiguityGuard were short single-word/phrase choices.
+
+**Why.** CONTRACTS.md's spec is a product description, not an
+implementation contract -- consistent with every prior deviation this
+session (AmbiguityGuard, PolyglotConsensus, SemanticCommitReveal,
+SemanticDiffLedger). Here the deviation is purely mechanical (still no
+list-argument risk taken) and doesn't need justifying in the contract's own
+docstring beyond a short note, unlike AmbiguityGuard's or
+SemanticCommitReveal's deviations, which changed product-visible behavior
+(state shape a caller would actually query).
+
+Live-verified end to end before writing gltest: CLI deploy with one core
+principle ("no treasury spend without a member vote") and empty initial
+body; `propose_amendment()` with a DIRECT, explicit contradiction of that
+principle ("the treasurer may unilaterally spend... at their sole
+discretion") -- ACCEPTED, `accepted: false`, `body` confirmed unchanged;
+`propose_amendment()` with an unrelated, clearly consistent clause (meeting
+schedule) -- ACCEPTED, `accepted: true`, `body` correctly grew to
+`"Amendment 2: ..."` (amendment count is 1-based off the full amendments
+archive, not a separate "accepted count"). `gltest --network studionet
+tests/test_constitutional_contract.py`: 7/7 passed cleanly on the first
+attempt (336.40s), no flakiness.
+
+**How to apply.** When a spec's State line implies a list-typed
+constructor or method argument, default to the `|`-or-comma-delimited
+`str` workaround (pick the delimiter based on whether the list items are
+short tokens like AmbiguityGuard's `options`, or full sentences like this
+contract's `core_principles`) rather than attempting an actual list
+argument, until list-typed calldata is verified live somewhere in this
+repo.
+
+---
+
 ## 2026-07-03 — SemanticDiffLedger (III.07) uses comparative even though both compared texts are deterministic input, unlike IntentLock
 
 **Decision.** Built `SemanticDiffLedger.propose()` with the `comparative`

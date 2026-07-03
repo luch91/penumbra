@@ -91,12 +91,13 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 - **API.** `propose(new_text) -> bumped: bool` · `version()` · `get_current()` · `count()` · `snapshot(v)`.
 - **Reuse.** On-chain changelogs, license/terms tracking, spec governance.
 
-### 8. ConstitutionalContract ◻️
+### 8. ConstitutionalContract ✅ `contracts/constitutional_contract.py`
 - **Purpose.** A rulebook in prose whose amendments must stay consistent with immutable core principles.
-- **Consensus.** `non_comparative`: core principles + proposed amendment are deterministic input; validators verify the leader's consistency ruling.
-- **State.** `core: DynArray[str]` (immutable after init), `body: str`, `amendments: DynArray[record]`.
-- **API.** `propose_amendment(text) -> accepted: bool` · `read_constitution()`.
+- **Consensus.** `non_comparative`: core principles + proposed amendment are deterministic input; validators verify the leader's consistency ruling, defaulting to reject on any ambiguity (same conservative posture as IntentLock).
+- **State.** `core: DynArray[str]` -- immutable in the literal sense: no method in this contract ever writes to it after the constructor, not just documented as immutable. `body: str` grows by one appended, numbered clause per accepted amendment. `amendments: DynArray[Amendment]` logs every proposal, accepted or rejected, as a governance audit trail.
+- **API.** `propose_amendment(text) -> accepted: bool` · `read_constitution()` · `core_count()` · `get_core(i)` · `count()` · `get_amendment(id)`.
 - **Reuse.** DAO charters, protocol policy, agent operating agreements.
+- **Note.** `core_principles` is a `|`-delimited string, not a list (the proven AmbiguityGuard `options` workaround for list-typed calldata) -- `|` was chosen over AmbiguityGuard's comma since principles are full sentences that may themselves contain commas.
 
 ---
 
