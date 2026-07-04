@@ -26,6 +26,7 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 | 11 | IntentLock | `0xb18b847BF6d4c1b98fb3E24515fC69914235727a` | `0x634b5677e305869b21916e51a3286f867db4c7e4634efec57dc63fc44854913e` | `policy="Allow any action that does not request a funds transfer without prior approval."` |
 | 12 | SemanticDiffLedger | `0x86a262679dE9001743B4077D479Ba55F74e5dCA2` | `0x92c899916a69708c31e3c7d76fa835f9e81c624afa1947e32219659c2b47104a` | `initial_text="This document may be amended by mutual agreement of both parties.", tolerance_milli=250` |
 | 13 | CorroborationOracle | `0x1c06c37dAe502E7202E7F39f9A40ca334115fee8` | `0x89b2d2712ff3d6722d3d47224dfe23cc02c7345333ab2b600655a2d6f7f1c193` | `threshold_milli=300, tolerance_milli=200` |
+| 14 | ProvenanceAttestor | `0xbfa8E2182deFC5fd707C82A73719592ef541270f` | `0x9967319c331df4148029b7e0ae358c27eded3cc81191bb4bac979286c84e4090` | (none) |
 
 ---
 
@@ -137,12 +138,13 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 - **Reuse.** Price/score/event oracles that must not trust a single endpoint.
 - **Note.** `urls` is a comma-separated string, not a list (AmbiguityGuard's proven list-typed-calldata workaround). The `gl.nondet.web.render` guard (try/except around each fetch inside the nondet closure, per SemanticDeadman) is reused here at a new call site -- confirmed live: a fetch that succeeds contributes real page text, and the contract never crashes even if a source is unreachable.
 
-### 13. ProvenanceAttestor ◻️
-- **Purpose.** Attest that a specific source supports a specific claim, with the supporting span recorded.
-- **Consensus.** `non_comparative`: validators independently re-read the source and verify the extracted span genuinely backs the claim.
-- **State.** `DynArray[Attestation]` (claim, url, span_hash, supports: bool).
-- **API.** `attest(claim, url) -> supports: bool` · `get(id)`.
+### 13. ProvenanceAttestor ✅ `contracts/provenance_attestor.py`
+- **Purpose.** Attest that a specific source supports (or does not support) a specific claim, with the supporting span recorded.
+- **Consensus.** `comparative`, not the `non_comparative` this catalog entry originally named -- a deliberate deviation. Each validator independently fetches the SAME url and independently judges support + extracts a span; the principle requires agreement on the `supports` boolean and, when both are true, that the spans reference the same underlying fact. Family V's whole point is trustless, cross-verified web reads; a single leader-controlled fetch (true `non_comparative`) would let a dishonest or unlucky leader fabricate a supporting span nobody else checks. See the contract's docstring and DECISIONS.md.
+- **State.** Append-only `DynArray[Attestation]` (`claim, url, supports, span, span_hash`) -- records EVERY attempt, including sources found NOT to support the claim (useful anti-misinformation data, not noise).
+- **API.** `attest(claim, url) -> supports: bool` · `count()` · `get(id)` · `latest_attestation()`.
 - **Reuse.** Citation chains, fact provenance, anti-misinformation rails.
+- **Note.** Reuses the `try/except`-around-`gl.nondet.web.render` guard (SemanticDeadman/CorroborationOracle) at a third confirmed call site: a live test with a deliberately unreachable `.invalid` URL resolved cleanly to `supports=false` rather than aborting the transaction.
 
 ### 14. CanaryTripwire ◻️
 - **Purpose.** Watch a web source for a plain-language condition and flip on consensus that it has occurred.

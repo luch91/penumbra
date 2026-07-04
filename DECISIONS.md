@@ -7,6 +7,73 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-04 — ProvenanceAttestor (V.13) deviates from CONTRACTS.md's non_comparative to comparative; a wrong-conda-env ImportError looked like the SynSent flakiness at first
+
+**Decision.** Built `ProvenanceAttestor.attest(claim, url)` with `comparative`,
+not the `non_comparative` CONTRACTS.md's one-line spec names. Each validator
+independently fetches the SAME url (guarded try/except, reusing
+SemanticDeadman/CorroborationOracle's pattern) and independently judges
+`supports` + extracts a `span`; the principle requires agreement on
+`supports`, and -- only when both sides say the source supports the claim --
+requires the spans to reference the same underlying fact (paraphrase-
+tolerant). State is an append-only `DynArray[Attestation]` that records
+EVERY attempt, including non-supporting ones, not just successes.
+
+**Why.** `non_comparative` means the LEADER ALONE produces the result
+(fetches, extracts) and validators only audit that result against fixed
+criteria -- they never independently fetch anything themselves. For family V
+("trustless web, verified across sources"), that would let a single
+dishonest or unlucky leader fabricate a supporting span from a page nobody
+else ever reads, with no independent basis for validators to catch it. This
+primitive's siblings in the same family -- `CorroborationOracle` (built) and
+`CanaryTripwire` (next) -- both use `comparative` for exactly this reason
+per their own catalog specs; treating `ProvenanceAttestor` as an
+exception (per its catalog entry) would have been internally inconsistent
+with the family's stated purpose, so it was corrected to match its
+siblings. This is the same category of judgment call as SemanticDiffLedger's
+comparative-over-apparent-non_comparative decision (2026-07-03): CONTRACTS.md
+is a product description, and the actual consensus-move choice has to serve
+the primitive's real trust guarantee, not just pattern-match the one-liner.
+
+Live-verified end to end before writing gltest: deployed to studionet
+(`0xbfa8E2182deFC5fd707C82A73719592ef541270f`), then `attest("Water boils at
+100 degrees Celsius at sea level", "https://en.wikipedia.org/wiki/Boiling_point")`
+-- SUCCESS, MAJORITY_AGREE, leader's `eq_outputs` showed a genuine extracted
+quoting span ("water boils at 100 degC, rounded from scientific precision of
+99.97 degC..."), `supports:true`; `count()`/`get(0)` confirmed the
+attestation was archived with a real `span_hash`. Then `attest("The moon is
+made of cheese", "https://<a-deliberately-unreachable-.invalid-domain>")` --
+SUCCESS (not a revert or hang), 4/5 agree, resolved cleanly to
+`supports:false, span:"", span_hash:""` -- confirming the fetch-failure
+guard works at this contract's call site too (the third confirmed site
+after SemanticDeadman and CorroborationOracle).
+
+**Also found this session:** the first `gltest` attempt produced a real
+(non-flaky) `ImportError: cannot import name 'Buffer' from 'collections.abc'`
+that superficially resembled the SynSent-hang/timeout flakiness documented
+for `CorroborationOracle` the same day -- an empty output file with a
+process that appeared to exit quickly. Root cause: the `gltest` command was
+launched from a bare Bash shell, which resolves the miniconda3 BASE conda
+env's Python (3.11.4), not the dedicated `genlayer` env (Python 3.12.13)
+every prior successful run in this repo actually used -- `genlayer_py`
+depends on `collections.abc.Buffer`, a Python 3.12+ stdlib addition absent
+from 3.11. Fixed by explicitly `conda activate genlayer` before invoking
+`gltest`; the re-run (correct env) passed 6/6 cleanly (265.79s).
+
+**How to apply.** (1) When a catalog spec's consensus move conflicts with
+what a primitive's own family/purpose actually requires for trustlessness,
+follow the family's intent and document the deviation, rather than
+following the literal one-liner -- check this against the primitive's
+siblings in the same family first. (2) Before concluding a `gltest` failure
+is environment flakiness (SynSent hang, connection timeout, etc.), actually
+read the log content -- a real Python traceback (ImportError, in this case)
+looks similar at a glance (empty-seeming output, quick process exit) but is
+a completely different, deterministic failure that retrying without fixing
+will reproduce every time. Always `conda activate genlayer` and confirm
+`python --version` is 3.12.x before running `gltest` in this repo.
+
+---
+
 ## 2026-07-04 — CorroborationOracle (V.12) reuses SemanticDeadman's web-fetch guard at a new call site; a genuine TCP SynSent hang required a kill-and-retry, not just a re-run
 
 **Decision.** Built `CorroborationOracle.establish(question, urls)` matching
