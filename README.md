@@ -69,7 +69,7 @@ Status legend: ✅ built and live-smoke-tested on studionet (deploy + method cal
 
 ### VII · Chronomancy — *time and liveness, judged*
 18. ✅ **SemanticDeadman** — a dead-man's switch that releases on *semantic* inactivity (no genuine public activity at a source), not just a missed timestamp ping. → `contracts/semantic_deadman.py`
-19. ◻️ **EscalatingVerdict** — a dispute primitive whose consensus rigor scales with stakes: `strict_eq` for pennies, multi-source non-comparative review for serious money. Tiered, economical consensus.
+19. ✅ **EscalatingVerdict** — a dispute primitive whose consensus rigor scales with stakes: `strict_eq` for pennies, `comparative` mid, multi-lens `non_comparative` review for serious money. Tiered, economical consensus. → `contracts/escalating_verdict.py`
 
 ### VIII · Markets of Meaning — *economic primitives with judgment baked in*
 20. ◻️ **RealitySettledMarket** — a binary market that self-settles from primary sources with an ambiguity guard: when sources conflict, it refuses to settle and refunds rather than guess. Prediction-market settlement done safely.
@@ -103,6 +103,7 @@ penumbra/
 │   ├── corroboration_oracle.py
 │   ├── provenance_attestor.py
 │   ├── canary_tripwire.py
+│   ├── escalating_verdict.py
 │   └── fixtures/              ← test-only stand-ins, not catalog primitives
 │       ├── audit_stub_target.py
 │       └── tripwire_callback_stub.py
@@ -123,7 +124,8 @@ penumbra/
     ├── test_constitutional_contract.py
     ├── test_corroboration_oracle.py
     ├── test_provenance_attestor.py
-    └── test_canary_tripwire.py
+    ├── test_canary_tripwire.py
+    └── test_escalating_verdict.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs.

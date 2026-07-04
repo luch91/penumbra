@@ -29,6 +29,7 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 | 14 | ProvenanceAttestor | `0xbfa8E2182deFC5fd707C82A73719592ef541270f` | `0x9967319c331df4148029b7e0ae358c27eded3cc81191bb4bac979286c84e4090` | (none) |
 | 15 | CanaryTripwire | `0x2DC5eD2A942b3e2B8Aa7a8763D8b8a03437ABD1D` | `0xb38da47fdf1c4cb6d22272c96ab26a89de02cb57a9d2e2032a2064ad7bb49f71` | `url="https://en.wikipedia.org/wiki/Boiling_point"` |
 | -- | TripwireCallbackStub (fixture, not a catalog primitive) | `0x3966c78E278bc46A3Bb87C14B8106F21069A9Bb3` | `0x9ffacc4f7134e33889e7cadf55fca6d4541d63497e9eb0f8bd96d2ac832671ff` | (none) |
+| 16 | EscalatingVerdict | `0xEd0c2440285De311E1727D35cA36659a8EDD600D` | `0xc1fa994427f7ecbd391968db297ea78f7e6da245fde73b1a2a659e7193479af1` | `mid_threshold=1000, large_threshold=10000` |
 
 ---
 
@@ -194,11 +195,12 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 - **API.** `check_in()` (owner) · `poke() -> released: bool` · `claim()` (beneficiary) · `fund()` (payable).
 - **Reuse.** Inheritance, key-rotation fallback, abandoned-treasury recovery.
 
-### 19. EscalatingVerdict ◻️
+### 19. EscalatingVerdict ✅ `contracts/escalating_verdict.py`
 - **Purpose.** Match consensus rigor to stakes so cheap disputes stay cheap and expensive ones get scrutiny.
-- **Consensus.** Tiered: `strict_eq` for small stakes, `comparative` mid, multi-source `non_comparative` for large. Tier selected deterministically from the escrowed amount.
-- **State.** `DynArray[Dispute]` (stake, tier, verdict).
-- **API.** `open_dispute(question)` payable · `resolve(id) -> verdict`.
+- **Consensus.** Tiered dispatcher: `strict_eq` for small stakes (a constrained yes/no/unclear vocabulary -- the only shape low-entropy enough for byte-identical agreement to be realistic), `comparative` mid (paraphrase-tolerant "same verdict" idiom), `non_comparative` for large stakes. Tier is selected by a deterministic threshold compare against `gl.message.value` at `open_dispute` time and locked into the record, so a caller cannot game the tier after the fact.
+- **Deviation.** CONTRACTS.md's spec calls the large-stake tier "multi-source non_comparative," but `open_dispute` takes only a `question` string -- no URLs -- and `non_comparative`'s verification input must be identical and deterministic on every node, so it cannot itself embed a leader-only LLM call. Built as multi-**lens** instead: three fixed analytical angles (factual accuracy, internal consistency, counter-argument robustness) are named directly in the deterministic input, and the `task`/`criteria` require the ruling to address all three. See the contract's docstring and DECISIONS.md.
+- **State.** Append-only `DynArray[Dispute]` (question, stake, tier), never mutated after creation, plus a separate `TreeMap[u256, str]` of verdicts keyed by dispute id -- the same dual-structure workaround SemanticCommitReveal uses to avoid unverified in-place `DynArray` element mutation. `treasury: u256` collects escrowed stakes as non-refundable dispute fees (no payout mechanism is specified for this primitive).
+- **API.** `open_dispute(question) -> id` payable · `resolve(id) -> verdict` · `withdraw_treasury()` (owner) · `count()` · `get(id)` · `tier_for_stake(stake)`.
 - **Reuse.** Marketplaces, insurance, arbitration with proportionate cost.
 
 ---

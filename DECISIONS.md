@@ -7,6 +7,83 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-04 — EscalatingVerdict (VII.19) dispatches across all three graduated consensus moves in one contract, and reinterprets "multi-source" as multi-lens
+
+**Decision.** Built `EscalatingVerdict` as a genuine dispatcher: the same
+contract runs `strict_eq`, `comparative`, AND `non_comparative` --
+previously, every other primitive in this repo picked exactly one move and
+committed to it for its whole lifetime. Here, `open_dispute(question)` is
+payable, and `gl.message.value` (the escrowed stake) deterministically
+selects a tier at open time, permanently stored on the dispute record so a
+caller cannot game the tier after seeing early signal. `resolve(id)` then
+dispatches on that stored tier.
+
+For the STRICT (small-stake) tier, the model is constrained to a
+low-entropy vocabulary (`yes`/`no`/`unclear`) specifically because
+`strict_eq` demands byte-identical agreement across every validator --
+free-form verdicts would essentially never agree byte-for-byte, so this
+tier is only sound for near-mechanical questions, matching the catalog's
+"cheap disputes stay cheap" framing literally.
+
+**Deviation.** CONTRACTS.md's spec names the large-stake tier "multi-source
+non_comparative." `open_dispute` takes only a `question` string -- no
+URLs, unlike CorroborationOracle/ProvenanceAttestor, which genuinely fetch
+external sources. More fundamentally, `non_comparative`'s verification
+INPUT must be identical and deterministic on every node; it cannot itself
+embed a leader-only LLM call's output, since that would break the
+"same input everywhere" guarantee the move depends on. So "multi-source"
+here is built as multi-LENS instead: three fixed, hardcoded analytical
+angles (factual accuracy, internal consistency, counter-argument
+robustness) are named directly in the deterministic verification input,
+and the `task`/`criteria` require the leader's ruling to explicitly
+address all three. This keeps the input byte-identical across every
+validator (non-negotiable) while still giving the large-stake tier
+genuinely more scrutiny than the mid tier -- more angles the ruling must
+survive, not more raw web sources, since the API this primitive was
+specified with carries none.
+
+**State design.** `disputes: DynArray[Dispute]` (question, stake, tier) is
+appended once and never mutated again; verdicts live in a separate
+`verdicts: TreeMap[u256, str]` keyed by dispute id, populated only at
+resolve time. This reuses SemanticCommitReveal's dual-structure workaround
+(2026-07-03) rather than attempting `self.disputes[id] = updated_record` --
+no contract in this repo has verified in-place `DynArray` element
+mutation, only append and read-by-index. "Resolved" is derived as "does
+`verdicts` have a non-empty entry for this id," which is safe because
+every one of the three tier-resolution paths is written to always return
+a non-empty string (falling back to `"unclear"` if a model somehow returns
+an empty verdict field).
+
+Live-verified end to end before writing gltest: deployed with
+`mid_threshold=1000, large_threshold=10000`
+(`0xEd0c2440285De311E1727D35cA36659a8EDD600D`). Since the `genlayer` CLI
+cannot send payable value (a known, separately-documented limitation),
+`open_dispute("Is 7 a prime number?")` via CLI necessarily lands
+`stake=0` -- confirmed `tier="STRICT"` as expected. `resolve(0)` then
+confirmed the STRICT path end to end: `execution_result: SUCCESS`,
+`eq_outputs` showing `{"verdict":"yes"}`, MAJORITY_AGREE, and a follow-up
+`get(0)` read confirming `resolved:true, verdict:"yes"`. The COMPARATIVE
+and NON_COMPARATIVE tiers (which need real payable value) were exercised
+via `gltest`'s `.transact(value=N)` instead, per the same pattern
+JailbreakBounty established. `gltest --network studionet
+tests/test_escalating_verdict.py`: 12/12 passed cleanly on the first
+attempt (382.89s), no flakiness -- covering all three tiers' resolve
+paths, tier selection at three threshold boundaries, double-resolve
+revert, resolve-nonexistent revert, empty-question revert, and the
+treasury withdrawal.
+
+**How to apply.** When a future primitive's spec names a consensus move
+that structurally cannot fit the primitive's actual API surface (here:
+"multi-source" implying external fetches, but the constructor/methods
+never carry URLs), reinterpret the spirit of the requirement (more
+scrutiny, more angles considered) within what the underlying consensus
+move's hard constraints actually allow (here: `non_comparative`'s
+identical-deterministic-input requirement), and document the
+reinterpretation explicitly rather than either bending the API to add
+unspecified parameters or silently downgrading the tier's rigor.
+
+---
+
 ## 2026-07-04 — CanaryTripwire (V.14) delivers the repo's first confirmed cross-contract WRITE, and reveals the callback is delivered asynchronously
 
 **Decision.** Built `CanaryTripwire` matching CONTRACTS.md's spec with no
