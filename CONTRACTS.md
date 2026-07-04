@@ -27,6 +27,8 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 | 12 | SemanticDiffLedger | `0x86a262679dE9001743B4077D479Ba55F74e5dCA2` | `0x92c899916a69708c31e3c7d76fa835f9e81c624afa1947e32219659c2b47104a` | `initial_text="This document may be amended by mutual agreement of both parties.", tolerance_milli=250` |
 | 13 | CorroborationOracle | `0x1c06c37dAe502E7202E7F39f9A40ca334115fee8` | `0x89b2d2712ff3d6722d3d47224dfe23cc02c7345333ab2b600655a2d6f7f1c193` | `threshold_milli=300, tolerance_milli=200` |
 | 14 | ProvenanceAttestor | `0xbfa8E2182deFC5fd707C82A73719592ef541270f` | `0x9967319c331df4148029b7e0ae358c27eded3cc81191bb4bac979286c84e4090` | (none) |
+| 15 | CanaryTripwire | `0x2DC5eD2A942b3e2B8Aa7a8763D8b8a03437ABD1D` | `0xb38da47fdf1c4cb6d22272c96ab26a89de02cb57a9d2e2032a2064ad7bb49f71` | `url="https://en.wikipedia.org/wiki/Boiling_point"` |
+| -- | TripwireCallbackStub (fixture, not a catalog primitive) | `0x3966c78E278bc46A3Bb87C14B8106F21069A9Bb3` | `0x9ffacc4f7134e33889e7cadf55fca6d4541d63497e9eb0f8bd96d2ac832671ff` | (none) |
 
 ---
 
@@ -146,12 +148,13 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 - **Reuse.** Citation chains, fact provenance, anti-misinformation rails.
 - **Note.** Reuses the `try/except`-around-`gl.nondet.web.render` guard (SemanticDeadman/CorroborationOracle) at a third confirmed call site: a live test with a deliberately unreachable `.invalid` URL resolved cleanly to `supports=false` rather than aborting the transaction.
 
-### 14. CanaryTripwire ◻️
+### 14. CanaryTripwire ✅ `contracts/canary_tripwire.py`
 - **Purpose.** Watch a web source for a plain-language condition and flip on consensus that it has occurred.
-- **Consensus.** `comparative` on the boolean tripwire state across validators that each fetch the source.
-- **State.** `armed: bool`, `tripped: bool`, `callback: Address`, `condition: str`.
-- **API.** `arm(condition, callback)` · `poll() -> tripped: bool` (fires a contract-to-contract callback on first trip).
+- **Consensus.** `comparative` on the boolean tripwire state across validators that each fetch the source, exactly as specified.
+- **State.** `owner: Address`, `url: str` (fixed at deploy time), `condition: str`, `callback: Address`, `armed: bool`, `tripped: bool`.
+- **API.** `arm(condition, callback)` (owner-only, re-armable until first trip) · `poll() -> tripped: bool` (idempotent once tripped; fires a contract-to-contract callback on first trip) · `status()`.
 - **Reuse.** On-chain alerts: depeg watch, governance-deadline watch, outage detection.
+- **Note.** This is the **first primitive in the repo to confirm a cross-contract WRITE call** (`gl.get_contract_at(callback).emit().on_trip(condition)`), previously the single least-verified surface in the repo (see CLAUDE.md). Confirmed live and via `gltest` against a deployed `TripwireCallbackStub` fixture -- with one significant caveat: the callback message is delivered **asynchronously** relative to the initiating `poll()` transaction. A read of the callback target's state immediately after `poll()` returns `SUCCESS`/`ACCEPTED` can still show the pre-callback state; callers must retry/wait, not assume synchronous delivery. See CLAUDE.md "Known blockers" and DECISIONS.md 2026-07-04 for the full story.
 
 ---
 

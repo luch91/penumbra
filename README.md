@@ -60,7 +60,7 @@ Status legend: ✅ built and live-smoke-tested on studionet (deploy + method cal
 ### V · Corroboration — *trustless web, verified across sources*
 12. ✅ **CorroborationOracle** — fetches N independent sources and accepts a fact only if cross-source agreement clears a threshold; exposes the corroboration ratio. → `contracts/corroboration_oracle.py`
 13. ✅ **ProvenanceAttestor** — given a claim + source, emits an attestation with the extracted supporting span; validators independently re-confirm the span backs the claim. Citation-chain provenance. → `contracts/provenance_attestor.py`
-14. ◻️ **CanaryTripwire** — monitors a web source for a plain-language tripwire and flips state (and can call back another contract) when consensus judges the condition met. An on-chain monitor.
+14. ✅ **CanaryTripwire** — monitors a web source for a plain-language tripwire and flips state (and can call back another contract) when consensus judges the condition met. An on-chain monitor; the first primitive here to confirm a live cross-contract WRITE callback. → `contracts/canary_tripwire.py`
 
 ### VI · Reflexion — *contracts that reason about consensus*
 15. ✅ **ConsensusThermometer** — runs a cheap "would the validators even agree?" pre-check before committing an expensive decision, and routes to a fallback when predicted agreement is low. Self-aware meta-consensus. → `contracts/consensus_thermometer.py`
@@ -102,8 +102,10 @@ penumbra/
 │   ├── constitutional_contract.py
 │   ├── corroboration_oracle.py
 │   ├── provenance_attestor.py
+│   ├── canary_tripwire.py
 │   └── fixtures/              ← test-only stand-ins, not catalog primitives
-│       └── audit_stub_target.py
+│       ├── audit_stub_target.py
+│       └── tripwire_callback_stub.py
 └── tests/                     ← gltest integration tests; assert invariants, never LLM strings
     ├── test_dissensus_oracle.py
     ├── test_jailbreak_bounty.py
@@ -120,7 +122,8 @@ penumbra/
     ├── test_semantic_diff_ledger.py
     ├── test_constitutional_contract.py
     ├── test_corroboration_oracle.py
-    └── test_provenance_attestor.py
+    ├── test_provenance_attestor.py
+    └── test_canary_tripwire.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs.

@@ -7,6 +7,74 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-04 — CanaryTripwire (V.14) delivers the repo's first confirmed cross-contract WRITE, and reveals the callback is delivered asynchronously
+
+**Decision.** Built `CanaryTripwire` matching CONTRACTS.md's spec with no
+consensus-move deviation (`comparative` on a single `condition_met`
+boolean, reusing SemanticDeadman/CorroborationOracle/ProvenanceAttestor's
+proven fetch-guard pattern for a fourth call site). `poll()` fires a
+cross-contract WRITE callback on first trip via
+`gl.get_contract_at(callback).emit().on_trip(condition)` -- the first time
+any contract in this repo has attempted the WRITE half of the
+cross-contract surface (only reads, via MirrorAudit, had been confirmed
+before this). A throwaway fixture, `TripwireCallbackStub`
+(`contracts/fixtures/tripwire_callback_stub.py`), records every call it
+receives so tests can confirm delivery, not just that `poll()` reported
+`tripped:true`.
+
+**Why.** CLAUDE.md had listed cross-contract WRITE as "completely
+unexercised" and flagged a known risk that `gl.get_contract_at` on an
+address with no deployed code might hang rather than revert. Rather than
+skip the callback (which the catalog spec explicitly calls for) or risk a
+hang in an automated test, the callback is wired as best-effort (wrapped in
+`try/except`, swallowing catchable failures) and every test that exercises
+the real trip path deploys a genuine `TripwireCallbackStub` fixture first
+and uses its live address -- never a synthetic one -- specifically to avoid
+the documented hang risk while still proving the real mechanism works.
+
+Live-verified end to end before writing gltest: deployed `TripwireCallbackStub`
+(`0x3966c78E278bc46A3Bb87C14B8106F21069A9Bb3`) and `CanaryTripwire`
+(`0x2DC5eD2A942b3e2B8Aa7a8763D8b8a03437ABD1D`, `url=".../Boiling_point"`),
+armed with a condition clearly true against that page ("the page mentions
+the word water"). `poll()` returned SUCCESS, `condition_met:true`
+(MAJORITY_AGREE); critically, the receipt's top-level `messages` array
+showed a queued message to the stub's address with method `on_trip` and
+the condition payload -- the first direct evidence a cross-contract WRITE
+was actually constructed. A follow-up `status()` read on the stub (run
+naturally several minutes after the `poll()` call, since it required a
+separate CLI invocation) confirmed `trip_count:1` and `last_condition`
+matching exactly -- full delivery confirmed.
+
+**Also found this session -- the actual discovery, made by `gltest` rather
+than the CLI:** the first full `gltest` run failed 2 of 7 tests, both with
+`stub_status["trip_count"] == 0` immediately after asserting
+`tx_execution_succeeded` on the initiating `poll()` transaction. This is
+because `gltest`'s test code reads the callback target's state in the very
+next line after the write returns, with no natural gap -- unlike the CLI
+session above, where the multi-minute gap between separate commands
+happened to mask that the callback message is delivered ASYNCHRONOUSLY
+relative to the initiating transaction reaching ACCEPTED/FINALIZED. Fixed
+by adding a `_wait_for_trip_count()` retry-poll helper (3s interval, 60s
+timeout) before any assertion on the callback target's state; both
+previously-failing tests then passed, and a clean full run passed 7/7
+(458.72s).
+
+**How to apply.** (1) Cross-contract WRITE (`gl.get_contract_at(...).emit()`)
+is now confirmed safe to build on, closing the single most unexercised
+surface documented in CLAUDE.md. (2) Any contract or test that depends on a
+cross-contract WRITE callback's effect being visible must poll/retry the
+target's state -- `tx_execution_succeeded` on the initiating write is
+NECESSARY but not SUFFICIENT evidence the downstream message has landed
+yet. This is a genuinely new finding, not previously documented anywhere in
+this repo (the read-only cross-contract surface, confirmed via MirrorAudit,
+is synchronous by contrast -- a deterministic read in the same transaction
+sees committed state immediately). (3) Never test a cross-contract WRITE
+target with a synthetic/non-deployed address, given the separately
+documented hang risk on `gl.get_contract_at` against code-less addresses --
+always deploy a real fixture contract first.
+
+---
+
 ## 2026-07-04 — ProvenanceAttestor (V.13) deviates from CONTRACTS.md's non_comparative to comparative; a wrong-conda-env ImportError looked like the SynSent flakiness at first
 
 **Decision.** Built `ProvenanceAttestor.attest(claim, url)` with `comparative`,
