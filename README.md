@@ -55,7 +55,7 @@ Status legend: ✅ built and live-smoke-tested on studionet (deploy + method cal
 ### IV · Adversaria — *consensus as referee in a game*
 9. ✅ **JailbreakBounty** — escrow that pays a challenger iff independent validators agree their prompt broke a stated rule. The inverse of Wizard-of-Coin: breaking the guard is the win, and the network is the impartial judge. → `contracts/jailbreak_bounty.py`
 10. ✅ **SchellingResolver** — players answer a subjective question; consensus clusters the answers and rewards those who matched the focal meaning. Keynesian beauty contest via semantic clustering. → `contracts/schelling_resolver.py`
-11. ◻️ **AdversarialReview** — stages two opposing LLM advocates inside the leader block; validators judge which case is stronger. Debate-as-consensus.
+11. ✅ **AdversarialReview** — stages two opposing LLM advocates inside the leader block; validators judge which case is stronger. Debate-as-consensus. → `contracts/adversarial_review.py`
 
 ### V · Corroboration — *trustless web, verified across sources*
 12. ✅ **CorroborationOracle** — fetches N independent sources and accepts a fact only if cross-source agreement clears a threshold; exposes the corroboration ratio. → `contracts/corroboration_oracle.py`
@@ -104,6 +104,7 @@ penumbra/
 │   ├── provenance_attestor.py
 │   ├── canary_tripwire.py
 │   ├── escalating_verdict.py
+│   ├── adversarial_review.py
 │   └── fixtures/              ← test-only stand-ins, not catalog primitives
 │       ├── audit_stub_target.py
 │       └── tripwire_callback_stub.py
@@ -125,7 +126,8 @@ penumbra/
     ├── test_corroboration_oracle.py
     ├── test_provenance_attestor.py
     ├── test_canary_tripwire.py
-    └── test_escalating_verdict.py
+    ├── test_escalating_verdict.py
+    └── test_adversarial_review.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs.

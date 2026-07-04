@@ -10,7 +10,7 @@ Penumbra is a library of **GenLayer Intelligent Contract primitives** — reusab
 
 Each contract is a standalone `.py` file in `contracts/`, deployable as-is to GenLayer Studio. There is **no package, no shared import at deploy time** — `lib/penumbra_consensus.py` is a copy-paste reference, and each contract inlines the few helpers it needs.
 
-Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the seventeen built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`, `contracts/semantic_deadman.py`, `contracts/mirror_audit.py`, `contracts/consensus_thermometer.py`, `contracts/ambiguity_guard.py`, `contracts/polyglot_consensus.py`, `contracts/semantic_commit_reveal.py`, `contracts/intent_lock.py`, `contracts/semantic_diff_ledger.py`, `contracts/constitutional_contract.py`, `contracts/corroboration_oracle.py`, `contracts/provenance_attestor.py`, `contracts/canary_tripwire.py`, `contracts/escalating_verdict.py`.
+Read `README.md` (thesis + catalog) and `CONTRACTS.md` (full spec of all 20) before building. Study the eighteen built primitives as the canonical style: `contracts/dissensus_oracle.py`, `contracts/jailbreak_bounty.py`, `contracts/proof_carrying_answer.py`, `contracts/schelling_resolver.py`, `contracts/semantic_deadman.py`, `contracts/mirror_audit.py`, `contracts/consensus_thermometer.py`, `contracts/ambiguity_guard.py`, `contracts/polyglot_consensus.py`, `contracts/semantic_commit_reveal.py`, `contracts/intent_lock.py`, `contracts/semantic_diff_ledger.py`, `contracts/constitutional_contract.py`, `contracts/corroboration_oracle.py`, `contracts/provenance_attestor.py`, `contracts/canary_tripwire.py`, `contracts/escalating_verdict.py`, `contracts/adversarial_review.py`.
 
 ---
 
@@ -243,12 +243,12 @@ Style: keep the deterministic/non-deterministic boundary visually obvious. Comme
 
 ---
 
-## Build queue (remaining 3, fully specified in CONTRACTS.md)
+## Build queue (remaining 2, fully specified in CONTRACTS.md)
 
-The shared-guard web-fetch trio (V) is complete: `CorroborationOracle`, `ProvenanceAttestor`, and `CanaryTripwire` are all built and confirm the `try/except`-around-`gl.nondet.web.render` guard works live across four call sites total. `CanaryTripwire` additionally delivered the first confirmed cross-contract WRITE in the repo (see "Known blockers" above) -- any future contract needing `.emit()` can now build on that pattern (best-effort try/except, callback delivery is asynchronous, target address must be a real deployed contract). `EscalatingVerdict` (VII) is also done -- a tiered consensus dispatcher (`strict_eq`/`comparative`/`non_comparative` selected deterministically by escrowed stake), deviating from CONTRACTS.md's literal "multi-source" wording for the large-stake tier into a multi-lens deterministic input instead (see DECISIONS.md).
+The shared-guard web-fetch trio (V) is complete: `CorroborationOracle`, `ProvenanceAttestor`, and `CanaryTripwire` are all built and confirm the `try/except`-around-`gl.nondet.web.render` guard works live across four call sites total. `CanaryTripwire` additionally delivered the first confirmed cross-contract WRITE in the repo (see "Known blockers" above) -- any future contract needing `.emit()` can now build on that pattern (best-effort try/except, callback delivery is asynchronous, target address must be a real deployed contract). `EscalatingVerdict` (VII) is done -- a tiered consensus dispatcher (`strict_eq`/`comparative`/`non_comparative` selected deterministically by escrowed stake), deviating from CONTRACTS.md's literal "multi-source" wording for the large-stake tier into a multi-lens deterministic input instead (see DECISIONS.md). `AdversarialReview` (IV) is also done -- `non_comparative` over a claim-only deterministic input, with the leader constructing both a steelmanned pro case and con case AND ruling in one call; live-verified with a genuinely contested claim producing two substantive, distinct cases and a margin that correctly reflected how close the call was.
 
 Next up:
-- **AdversarialReview** (IV) and **EquivalenceRegistry** (VI) — the two genuinely novel mechanisms: AdversarialReview's dual-advocate staging, EquivalenceRegistry's likely cross-contract WRITE need (now de-risked by CanaryTripwire's confirmation above).
+- **EquivalenceRegistry** (VI) — the last genuinely novel mechanism, with a likely cross-contract WRITE need (now de-risked by CanaryTripwire's confirmation above).
 
 Then: **RealitySettledMarket** (VIII), saved for last since it composes both AmbiguityGuard's ambiguity-guard pattern and the web-fetch trio's fetch-guard pattern (see DECISIONS.md's ordering rationale).
 

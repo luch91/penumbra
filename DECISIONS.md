@@ -7,6 +7,64 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-04 — AdversarialReview (IV.11) uses non_comparative to make the LEADER stage its own debate, rather than judging a single unopposed opinion
+
+**Decision.** Built `AdversarialReview.adjudicate(claim)` matching
+CONTRACTS.md's spec exactly: `non_comparative`, no deviation needed. The
+claim alone is the deterministic verification input -- identical on the
+leader and every validator. The `task` instructs the leader to do THREE
+things in one call: construct the strongest good-faith case FOR the claim,
+construct the strongest good-faith case AGAINST it, and then rule which
+side wins and by what margin. The `criteria` validators check against
+require: both cases are genuine and substantive (reject strawmanning
+either side), the ruling actually follows from comparing the two cases as
+stated in the rationale (not asserted without support), and the margin
+must not contradict what the rationale describes (a claimed landslide
+paired with a rationale describing a close call is untrustworthy).
+
+**Why.** This is structurally the same shape as ProofCarryingAnswer and
+MirrorAudit -- a single deterministic input, leader does the (harder) work,
+validators verify integrity rather than re-deriving. What's new here is
+that the "work" itself is adversarial: rather than asking the model for
+its opinion directly (DissensusOracle's/AmbiguityGuard's approach), the
+task forces it to construct a real opposing case FIRST and rule only after
+that opposition exists. A verdict that had to survive its own steelmanned
+counter-argument, verified for whether it actually grappled with that
+counter-argument, is a stronger signal than an unopposed opinion.
+
+State stores only content-addressed digests of the pro and con cases
+(`pro_case_hash`, `con_case_hash`), not the full text -- the same
+"digest on-chain, full text off-chain" pattern ProofCarryingAnswer uses,
+avoiding storage cost for prose on every ruling while still letting anyone
+who saved the original response verify it wasn't altered.
+
+Live-verified end to end before writing gltest: deployed
+(`0x11442B968334d36C8b8A9EF6a30D2c159A1BB0B4`), then
+`adjudicate("Remote work is better for employee productivity than office
+work")` -- SUCCESS, MAJORITY_AGREE. The leader produced two genuinely
+distinct, substantive cases (the pro case argued autonomy/focus gains from
+eliminating commute and interruptions; the con case argued the claim's
+universal wording ignores role/context-dependence) and ruled `winner:
+"con", margin_milli: 180` -- correctly a narrow margin, matching a
+rationale that explicitly called it close ("though not by a large
+margin"). `count()`/`get(0)` confirmed the case was archived with two
+distinct 64-char hex digests. `gltest --network studionet
+tests/test_adversarial_review.py`: 5/5 passed cleanly on the first attempt
+(200.90s), no flakiness.
+
+**How to apply.** When a primitive's spec already names the correct
+consensus move (as here, `non_comparative` genuinely fits since the input
+is claim-only and deterministic), the design work is in the `task`/
+`criteria` prompt engineering, not in second-guessing the move choice --
+verify this by checking whether the input truly needs to be identical
+across every node (it does here: a claim, nothing else) rather than
+whether the WORK the leader does feels complex (constructing two cases and
+ruling on them is more work than a single verdict, but it's still one
+leader call over one deterministic input, which is exactly what
+non_comparative is for).
+
+---
+
 ## 2026-07-04 — EscalatingVerdict (VII.19) dispatches across all three graduated consensus moves in one contract, and reinterprets "multi-source" as multi-lens
 
 **Decision.** Built `EscalatingVerdict` as a genuine dispatcher: the same

@@ -30,6 +30,7 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 | 15 | CanaryTripwire | `0x2DC5eD2A942b3e2B8Aa7a8763D8b8a03437ABD1D` | `0xb38da47fdf1c4cb6d22272c96ab26a89de02cb57a9d2e2032a2064ad7bb49f71` | `url="https://en.wikipedia.org/wiki/Boiling_point"` |
 | -- | TripwireCallbackStub (fixture, not a catalog primitive) | `0x3966c78E278bc46A3Bb87C14B8106F21069A9Bb3` | `0x9ffacc4f7134e33889e7cadf55fca6d4541d63497e9eb0f8bd96d2ac832671ff` | (none) |
 | 16 | EscalatingVerdict | `0xEd0c2440285De311E1727D35cA36659a8EDD600D` | `0xc1fa994427f7ecbd391968db297ea78f7e6da245fde73b1a2a659e7193479af1` | `mid_threshold=1000, large_threshold=10000` |
+| 17 | AdversarialReview | `0x11442B968334d36C8b8A9EF6a30D2c159A1BB0B4` | `0x0bd9add453de03285d0b4d3482b37f48717a7dbc83cb6fb04935bcbc4e40a60a` | (none) |
 
 ---
 
@@ -122,12 +123,13 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 - **API.** `submit(answer)` payable-stake · `resolve()` · `claim()`.
 - **Reuse.** Decentralized labeling, subjective dispute resolution, focal-point coordination.
 
-### 11. AdversarialReview ◻️
+### 11. AdversarialReview ✅ `contracts/adversarial_review.py`
 - **Purpose.** Decide a contested claim by staging a debate rather than a single judgment.
-- **Consensus.** `non_comparative`: the leader generates a pro case and a con case and a ruling; validators verify the ruling fairly follows from the stronger case.
-- **State.** `DynArray[Case]` (claim, winner, margin).
-- **API.** `adjudicate(claim) -> winner` · `get(id)`.
+- **Consensus.** `non_comparative`: the claim alone is the deterministic input; the leader constructs both a steelmanned pro case AND a steelmanned con case AND rules on them in one call, and validators verify the whole package's integrity (both cases genuine and substantive, the ruling actually follows from comparing them, the margin doesn't contradict the rationale) against fixed criteria.
+- **State.** Append-only `DynArray[Case]` (claim, winner, margin_milli, pro_case_hash, con_case_hash) -- the full case text is returned transiently but not stored on-chain, the same digest-on-chain pattern ProofCarryingAnswer uses for its proof.
+- **API.** `adjudicate(claim) -> winner` · `count()` · `get(id)`.
 - **Reuse.** Grant review, content appeals, any "steelman both sides" decision.
+- **Note.** Live-verified with a genuinely contested claim ("remote work is better for productivity than office work") -- the leader produced two substantive, distinct steelmanned cases and ruled `winner:"con", margin_milli:180` (a close call, correctly reflected in both the margin and the rationale), MAJORITY_AGREE.
 
 ---
 
