@@ -7,6 +7,74 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-04 — CorroborationOracle (V.12) reuses SemanticDeadman's web-fetch guard at a new call site; a genuine TCP SynSent hang required a kill-and-retry, not just a re-run
+
+**Decision.** Built `CorroborationOracle.establish(question, urls)` matching
+CONTRACTS.md's spec with `comparative` on a two-field result
+(`{value, ratio_milli}`) extracted from N independently-fetched sources,
+followed by a deterministic `require(ratio_milli >= threshold_milli)` gate
+after consensus resolves -- the same "deterministic gate after the nondet
+block settles" shape as SemanticDiffLedger's version bump and
+AmbiguityGuard's status routing, applied here to accept/revert instead of
+routing. Two implementation choices worth recording:
+1. `urls` is a comma-delimited `str`, not a `DynArray[str]` -- reusing
+   AmbiguityGuard's proven list-typed-calldata workaround a third time.
+2. Every `gl.nondet.web.render()` call inside the nondet closure is wrapped
+   in its own `try/except`, converting a fetch failure into a
+   `"[FETCH FAILED: ...]"` snippet fed to the LLM rather than an uncaught
+   `NondetException` that would abort the whole transaction -- reusing
+   `SemanticDeadman.poke()`'s guard unchanged.
+
+**Why.** CLAUDE.md is explicit that a proven pattern still needs its own
+live confirmation at each new call site -- `SemanticDeadman`'s guard being
+correct doesn't automatically mean `CorroborationOracle`'s usage of the
+same primitive is correct, since the surrounding closure, prompt shape, and
+failure handling differ. This was worth verifying deliberately rather than
+assuming it "should just work."
+
+Live-verified end to end before writing gltest: deployed two instances
+against the same fixed (question, urls) pair -- a Wikipedia boiling-point
+question against two Wikipedia pages -- with `threshold_milli=700` and
+`threshold_milli=300` respectively. Both independently reproduced
+`ratio_milli=500` (the LLM counted only 1 of 2 sources as an explicit
+"agreeing" source, even though both pages restate the same value). The
+700-threshold instance reverted correctly (majority-agreed deterministic
+rollback, `"insufficient corroboration across sources"`, 3 agree/1
+disagree/1 idle); the 300-threshold instance succeeded, returned
+`"100 degC"`, and `count()`/`get(0)` confirmed the fact was genuinely
+archived. Having the same real-world input reproduce identically twice is
+what made it safe to write gltest assertions pinning both the low-threshold
+-success and high-threshold-revert paths off one fixed (question, urls)
+pair, rather than gambling on live LLM/web variance for each.
+
+`gltest --network studionet tests/test_corroboration_oracle.py`: first
+attempt hung mid-suite -- not the previously-known
+RemoteDisconnected/ConnectionAbortedError/timeout flakiness (those surface
+as Python exceptions and just need a retry), but a genuine TCP-level stall:
+the process's CPU time showed zero growth across two consecutive ~5-minute
+polls. `Get-NetTCPConnection -OwningProcess <pid>` confirmed a connection
+stuck in `SynSent` state -- the handshake itself never completed. Unlike
+exception-based flakiness, a stuck-but-alive process doesn't clear on its
+own; had to `Stop-Process -Force` the stalled PIDs before re-running from
+scratch. The clean re-run passed 7/7 (317.98s), including the test that had
+shown a bare "F" in the killed first run (no traceback was ever captured
+for it, since the process was killed mid-test rather than completing) --
+strongly indicating the original failure was a downstream artifact of the
+same network stall, not a real assertion failure, since a genuine bug in a
+deterministic revert-path test would not have cleared on a clean retry with
+zero code changes.
+
+**How to apply.** When a `gltest` run appears to hang (not error out), check
+CPU-time growth across two multi-minute polls before waiting longer -- flat
+CPU time is a signal to check `Get-NetTCPConnection` for a `SynSent`-stuck
+handshake and kill-and-retry, not to keep polling passively (unlike the
+previously-known exception-based flakiness, which does clear with a plain
+retry). Do not treat a single "F" from a run that was subsequently killed as
+evidence of a real bug -- rerun clean first, since pytest's failure detail
+is only written at the end of a completed session.
+
+---
+
 ## 2026-07-03 — ConstitutionalContract (III.08) makes `core` immutable by simply never writing to it, and reuses AmbiguityGuard's delimited-string workaround for a second list-shaped parameter
 
 **Decision.** Built `ConstitutionalContract` matching CONTRACTS.md's spec

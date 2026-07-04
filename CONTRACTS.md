@@ -25,6 +25,7 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 | 10 | SemanticCommitReveal | `0xb54322cc0FE6a8468F674B1A966792e50757B05A` | `0x373ff1331a0d0e24c542539078cdace01d19061a505547474e94f6805647fa1b` | (none) |
 | 11 | IntentLock | `0xb18b847BF6d4c1b98fb3E24515fC69914235727a` | `0x634b5677e305869b21916e51a3286f867db4c7e4634efec57dc63fc44854913e` | `policy="Allow any action that does not request a funds transfer without prior approval."` |
 | 12 | SemanticDiffLedger | `0x86a262679dE9001743B4077D479Ba55F74e5dCA2` | `0x92c899916a69708c31e3c7d76fa835f9e81c624afa1947e32219659c2b47104a` | `initial_text="This document may be amended by mutual agreement of both parties.", tolerance_milli=250` |
+| 13 | CorroborationOracle | `0x1c06c37dAe502E7202E7F39f9A40ca334115fee8` | `0x89b2d2712ff3d6722d3d47224dfe23cc02c7345333ab2b600655a2d6f7f1c193` | `threshold_milli=300, tolerance_milli=200` |
 
 ---
 
@@ -128,12 +129,13 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 
 ## V · Corroboration
 
-### 12. CorroborationOracle ◻️
+### 12. CorroborationOracle ✅ `contracts/corroboration_oracle.py`
 - **Purpose.** Accept a fact only when independent sources corroborate it; publish the corroboration ratio.
-- **Consensus.** `comparative`: each validator fetches the same N source URLs and extracts the fact; the principle requires agreement on the corroborated value. Sources that disagree drag the ratio below threshold and the write reverts.
-- **State.** `DynArray[Fact]` (value, ratio_milli, sources_count).
-- **API.** `establish(question, urls[]) -> value` · `get(id)`.
+- **Consensus.** `comparative`: each validator independently fetches the same fixed set of source URLs and extracts a plurality value + agreeing-source count; the principle requires agreement on both the value (paraphrase-tolerant) and `ratio_milli` (within tolerance). A deterministic `require(ratio_milli >= threshold_milli)` gate runs after consensus settles -- weak corroboration reverts and nothing is archived.
+- **State.** Append-only `DynArray[Fact]` (`question, value, ratio_milli, sources_count`) + `latest` index.
+- **API.** `establish(question, urls) -> value` · `count()` · `get(id)` · `latest_fact()`.
 - **Reuse.** Price/score/event oracles that must not trust a single endpoint.
+- **Note.** `urls` is a comma-separated string, not a list (AmbiguityGuard's proven list-typed-calldata workaround). The `gl.nondet.web.render` guard (try/except around each fetch inside the nondet closure, per SemanticDeadman) is reused here at a new call site -- confirmed live: a fetch that succeeds contributes real page text, and the contract never crashes even if a source is unreachable.
 
 ### 13. ProvenanceAttestor ◻️
 - **Purpose.** Attest that a specific source supports a specific claim, with the supporting span recorded.
