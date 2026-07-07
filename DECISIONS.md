@@ -7,6 +7,63 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-07 — EquivalenceRegistry (VI.17) is the one primitive that runs no consensus block at all, and needs no cross-contract WRITE
+
+**Decision.** Built `EquivalenceRegistry` as pure deterministic CRUD:
+`register(name, text)` / `bump(name, text)` writes and `get`/`get_full`/
+`exists`/`version_of` views, with no `gl.eq_principle.*` or `gl.nondet.*`
+call anywhere in the contract. It is the only primitive in the catalog with
+zero non-deterministic surface of its own. Its entire value is being the
+TARGET of a cross-contract READ: another contract calls
+`gl.get_contract_at(registry).view().get(name)` and feeds the returned
+principle text straight into ITS own `comparative`/`non_comparative` call.
+
+**Why no consensus block here.** CONTRACTS.md itself flagged this as
+"`strict_eq`-trivial." Forcing an equivalence principle onto a deterministic
+`self.principles[n] = ...` mutation would trivially agree on every validator
+(nothing non-deterministic to disagree about), so paying for a nondet block
+would be pure waste. The interesting consensus does not live in this
+contract; it lives in every downstream consumer that shares one audited,
+versioned definition of "these two things count as equivalent" instead of
+hardcoding its own principle prose. Composable consensus policy as
+infrastructure.
+
+**Correcting an earlier guess.** CLAUDE.md's build queue had predicted
+EquivalenceRegistry would "likely" need a cross-contract WRITE (which
+CanaryTripwire had just de-risked). That guess was wrong: the registry is
+read-only from its own side -- it never calls another contract at all, it is
+only ever called. No WRITE, no `.emit()`, no callback. The cross-contract
+surface it exercises is the READ half, and only from the consumer's side,
+already confirmed safe by MirrorAudit and CanaryTripwire.
+
+**State design.** Two parallel maps rather than one: `principles:
+TreeMap[str, Principle]` (text + author) for content, and `versions:
+TreeMap[str, u256]` as an existence/version index where 0 means "never
+registered." They are kept separate because `TreeMap.get(key, default)`
+needs a default of the same type as the map's value type, and a scalar
+`u256(0)` sentinel is the proven-safe "does this key exist yet" idiom used
+elsewhere in this repo (ProofCarryingAnswer's `seen`, PolyglotConsensus's
+dedupe map) -- checking existence never has to construct or touch a
+`Principle` record that might not exist. `author` is fixed at registration
+and is the only address permitted to `bump()` that specific entry:
+decentralized, per-entry ownership rather than one global registry admin,
+so no single party controls every shared definition. This also sidesteps
+the known-unverified in-place `DynArray` mutation risk -- `bump` overwrites
+a `TreeMap` value by key (proven safe) rather than mutating an array
+element by index.
+
+**Verification.** Live CLI: `register` round-trips the text exactly,
+`version_of`/`exists` correct, a duplicate `register` reverts with
+`execution_result: ERROR` (state untouched), and an author `bump` took the
+version to 2 with the new text. The non-author `bump` gate is covered in
+gltest (a fresh `create_account()` cannot bump another author's entry).
+10/10 gltest passed. This suite is the first in the repo that asserts
+zero LLM behavior -- every assertion is a hard deterministic invariant,
+which is correct precisely because the contract has no non-deterministic
+behavior to be lenient about.
+
+---
+
 ## 2026-07-04 — AdversarialReview (IV.11) uses non_comparative to make the LEADER stage its own debate, rather than judging a single unopposed opinion
 
 **Decision.** Built `AdversarialReview.adjudicate(claim)` matching

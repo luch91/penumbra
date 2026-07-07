@@ -31,6 +31,7 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 | -- | TripwireCallbackStub (fixture, not a catalog primitive) | `0x3966c78E278bc46A3Bb87C14B8106F21069A9Bb3` | `0x9ffacc4f7134e33889e7cadf55fca6d4541d63497e9eb0f8bd96d2ac832671ff` | (none) |
 | 16 | EscalatingVerdict | `0xEd0c2440285De311E1727D35cA36659a8EDD600D` | `0xc1fa994427f7ecbd391968db297ea78f7e6da245fde73b1a2a659e7193479af1` | `mid_threshold=1000, large_threshold=10000` |
 | 17 | AdversarialReview | `0x11442B968334d36C8b8A9EF6a30D2c159A1BB0B4` | `0x0bd9add453de03285d0b4d3482b37f48717a7dbc83cb6fb04935bcbc4e40a60a` | (none) |
+| 18 | EquivalenceRegistry | `0xad2649F4710627fEc20c947edA69EA8412f588b3` | `0xd4f40d5425723718056d1b3535f495e9b6bc15d6d6a95d75861983770e58642b` | (none) |
 
 ---
 
@@ -179,12 +180,12 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 - **Reuse.** On-chain conformance checks, registry gating, agent-to-agent trust.
 - **Assumption.** Target must expose `status() -> str` (the same canonical-JSON convention every Penumbra contract already follows); see the contract's docstring.
 
-### 17. EquivalenceRegistry ◻️
+### 17. EquivalenceRegistry ✅ `contracts/equivalence_registry.py`
 - **Purpose.** Make equivalence principles reusable, named, on-chain objects.
-- **Consensus.** Deterministic registry CRUD (`strict_eq`-trivial); other contracts fetch a principle string via contract-to-contract `view()` and feed it into their own `comparative` calls.
-- **State.** `TreeMap[str, Principle]` (name → text, author, version).
-- **API.** `register(name, text)` · `get(name) -> text` · `bump(name, text)`.
-- **Reuse.** Shared, audited "definitions of agreement" across an ecosystem.
+- **Consensus.** *None applied within* — the first primitive here that runs no non-deterministic block at all. Registry CRUD is plain deterministic writes/views; the consensus USE happens downstream, in whichever contract fetches a principle via contract-to-contract `view()` and feeds it into its own `comparative`/`non_comparative` call.
+- **State.** `principles: TreeMap[str, Principle]` (text, author) for content, plus a parallel `versions: TreeMap[str, u256]` existence/version index (0 = never registered) — kept separate so the "does this key exist" check never touches a possibly-absent record. `author` is fixed at registration; only that address may `bump()`.
+- **API.** `register(name, text)` · `bump(name, text)` (author-only) · `get(name) -> text` · `get_full(name) -> json` · `exists(name)` · `version_of(name)`.
+- **Reuse.** Shared, audited "definitions of agreement" across an ecosystem: one canonical principle a DAO can tighten once and update every consumer at once.
 
 ---
 

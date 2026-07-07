@@ -65,7 +65,7 @@ Status legend: ✅ built and live-smoke-tested on studionet (deploy + method cal
 ### VI · Reflexion — *contracts that reason about consensus*
 15. ✅ **ConsensusThermometer** — runs a cheap "would the validators even agree?" pre-check before committing an expensive decision, and routes to a fallback when predicted agreement is low. Self-aware meta-consensus. → `contracts/consensus_thermometer.py`
 16. ✅ **MirrorAudit** — given another contract's address and a behavioral spec, reads its public state via contract-to-contract calls and judges via consensus whether it conforms. Contracts auditing contracts. → `contracts/mirror_audit.py`
-17. ◻️ **EquivalenceRegistry** — named, reusable equivalence principles as first-class on-chain objects other contracts fetch and apply. Composable consensus policy as infrastructure.
+17. ✅ **EquivalenceRegistry** — named, reusable equivalence principles as first-class on-chain objects other contracts fetch and apply. The one primitive here that runs *no* consensus block of its own — it exists to be read. Composable consensus policy as infrastructure. → `contracts/equivalence_registry.py`
 
 ### VII · Chronomancy — *time and liveness, judged*
 18. ✅ **SemanticDeadman** — a dead-man's switch that releases on *semantic* inactivity (no genuine public activity at a source), not just a missed timestamp ping. → `contracts/semantic_deadman.py`
@@ -105,6 +105,7 @@ penumbra/
 │   ├── canary_tripwire.py
 │   ├── escalating_verdict.py
 │   ├── adversarial_review.py
+│   ├── equivalence_registry.py
 │   └── fixtures/              ← test-only stand-ins, not catalog primitives
 │       ├── audit_stub_target.py
 │       └── tripwire_callback_stub.py
@@ -127,7 +128,8 @@ penumbra/
     ├── test_provenance_attestor.py
     ├── test_canary_tripwire.py
     ├── test_escalating_verdict.py
-    └── test_adversarial_review.py
+    ├── test_adversarial_review.py
+    └── test_equivalence_registry.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs.
