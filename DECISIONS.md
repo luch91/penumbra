@@ -7,6 +7,85 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-07-08 — RealitySettledMarket (VIII.20), the final primitive: composing two proven patterns instead of inventing a third
+
+**Decision.** Built `RealitySettledMarket` exactly as CONTRACTS.md's spec
+implies, as a composition of two mechanisms this repo had already verified
+live rather than as a new consensus shape:
+
+  1. **AmbiguityGuard's confidence-then-decide structure**, reused wholesale.
+     `settle()`'s nondet block asks the model for an outcome token (YES/NO/
+     UNCLEAR) AND a `confidence_milli` measuring how strongly the sources
+     determine it. `comparative` consensus is keyed on BOTH fields (within
+     `tolerance_milli`), so validators must agree not just on the answer but
+     on how clear-cut it was. A plain deterministic `if` afterward -- not the
+     LLM -- decides settlement: only a YES/NO whose confidence clears
+     `abstain_threshold_milli` settles that way; anything else (UNCLEAR, or a
+     low-confidence YES/NO) collapses to REFUND.
+  2. **CorroborationOracle's guarded multi-URL fetch**, reused unchanged.
+     Every `resolution_urls` entry is fetched inside its own try/except
+     inside the nondet closure; a dead source degrades to a
+     "[FETCH FAILED: ...]" string that the prompt is told counts AGAINST
+     confidence, rather than raising an uncaught `NondetException` that
+     would abort the whole `settle()` transaction.
+
+**Why compose instead of invent.** CLAUDE.md is explicit that inventing a
+new, unverified nondeterminism pattern is the single most expensive mistake
+in this codebase -- exactly the reasoning AmbiguityGuard itself used to
+deviate from CONTRACTS.md's literal wording back in family II. By the time
+this, the last primitive, was reached, both halves of what it needed were
+already proven live at multiple call sites, so there was no reason to touch
+new ground. This is also why RealitySettledMarket was deliberately built
+last (see the 2026-07-04 CanaryTripwire/EscalatingVerdict entries below for
+the same ordering logic) -- every pattern it needed to lean on already had
+a track record.
+
+**The degenerate-market guard.** A judged winner (YES or NO) whose pool is
+literally empty -- e.g. every bettor picked YES and reality resolved NO, so
+there is no one on the winning side -- has no one to pay. Rather than let
+that silently produce a settlement with zero payouts (which would violate
+the intended invariant "money always goes somewhere"), `settle()` overrides
+this case to REFUND, preserving the exact invariant stated in the contract's
+own docstring: stored outcome is REFUND if and only if every bettor gets
+back their own stake. This was designed in from the start, not discovered
+as a bug, but it is the one branch of the settlement logic that has no
+direct precedent in SchellingResolver (which has no equivalent to "picked
+the winning side but the side turns out to be empty," since its winners are
+chosen FROM the submissions that exist).
+
+**Money design.** `bet()`/`redeem()` reuse SchellingResolver's payable-pool
++ pull-payment-ledger shape unchanged: stakes accumulate in `yes_pool`/
+`no_pool` during betting, and `settle()` only ever CREDITS the `claimable`
+ledger -- it never pushes value. Winning-side payout is pro-rata by stake
+using integer floor division (`stake * pool // win_pool`), so the ledger can
+only under-credit by rounding dust, never over-credit; REFUND credits each
+bettor their own stake exactly. The `# INTEGRATION HOOK` comment marking
+where a real native transfer would go is copied verbatim from
+SchellingResolver/JailbreakBounty, consistent with CLAUDE.md's guidance that
+the exact native-transfer-out call remains unverified on this runner.
+
+**Verification.** Live CLI confirmed the fully-deterministic surface: deploy
+succeeded, `status()` round-trips `question`/`resolution_urls` exactly, a
+zero-stake `bet()` reverts (CLI cannot send payable value, so this is as far
+as CLI testing goes -- consistent with every other payable contract in this
+repo), and `settle()` with no bets reverts. The real money path needed
+`gltest`'s `.transact(value=N)`: 8/8 passed (425.26s), including both
+branches of `settle()` that matter most -- a clearly-YES market (Apollo 11
+against two Wikipedia sources) paying the winning side the whole pool, and a
+deliberately unresolvable market (two `.invalid` domains, guaranteed fetch
+failures on both sources) REFUNDing both bettors their exact original
+stakes. The clear-market test tolerates either a confident YES or a
+cautious REFUND as a passing outcome (never a confident NO), consistent with
+this repo's standing rule to assert invariants and never bet a test on exact
+LLM output.
+
+**Catalog status.** This closes the build queue: all 20 primitives specified
+in CONTRACTS.md are now built, live-verified via CLI and/or gltest, and
+committed. Any future work in this repo is either a fix to an existing
+contract or a genuinely new addition beyond the original 20.
+
+---
+
 ## 2026-07-07 — EquivalenceRegistry (VI.17) is the one primitive that runs no consensus block at all, and needs no cross-contract WRITE
 
 **Decision.** Built `EquivalenceRegistry` as pure deterministic CRUD:

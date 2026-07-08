@@ -32,6 +32,7 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 | 16 | EscalatingVerdict | `0xEd0c2440285De311E1727D35cA36659a8EDD600D` | `0xc1fa994427f7ecbd391968db297ea78f7e6da245fde73b1a2a659e7193479af1` | `mid_threshold=1000, large_threshold=10000` |
 | 17 | AdversarialReview | `0x11442B968334d36C8b8A9EF6a30D2c159A1BB0B4` | `0x0bd9add453de03285d0b4d3482b37f48717a7dbc83cb6fb04935bcbc4e40a60a` | (none) |
 | 18 | EquivalenceRegistry | `0xad2649F4710627fEc20c947edA69EA8412f588b3` | `0xd4f40d5425723718056d1b3535f495e9b6bc15d6d6a95d75861983770e58642b` | (none) |
+| 19 | RealitySettledMarket | `0xC0cbb1Bf82D530D687e0f78892a4624Dd98Bd7e2` | `0x09fb38fce8e6c38128cfc256fa15265c01d6b7639fb47aca839f6f5b98169946` | `question="Did Apollo 11 land humans on the Moon in 1969?", resolution_urls="...Apollo_11,...Moon_landing", abstain_threshold_milli=600, tolerance_milli=250` |
 
 ---
 
@@ -210,9 +211,10 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 
 ## VIII · Markets of Meaning
 
-### 20. RealitySettledMarket ◻️
+### 20. RealitySettledMarket ✅ `contracts/reality_settled_market.py`
 - **Purpose.** A binary market that settles itself from primary sources, and refuses to settle when reality is unclear.
-- **Consensus.** `comparative` on the YES/NO outcome across validators that each fetch the resolution sources; an ambiguity guard converts source conflict into `REFUND` instead of a coin-flip.
-- **State.** `question`, `yes_pool`, `no_pool`, `resolution_urls`, `outcome` enum.
-- **API.** `bet(side)` payable · `settle() -> outcome` · `redeem()`.
+- **Consensus.** `comparative` on the (outcome, confidence) pair across validators that each re-fetch the resolution sources; a deterministic ambiguity guard converts source conflict or low confidence into `REFUND` instead of a coin-flip. Composes AmbiguityGuard's confidence-then-decide shape with CorroborationOracle's `try/except`-guarded `gl.nondet.web.render` fetch.
+- **State.** `question`, `resolution_urls` (comma-separated), `yes_pool`, `no_pool`, `outcome` (str: ""/YES/NO/REFUND), `confidence_milli`, `bets: DynArray[Bet]`, `claimable: TreeMap[Address, u256]`.
+- **API.** `bet(side)` payable · `settle() -> outcome` · `redeem()` · reads `status`/`get`/`is_settled`/`settled_outcome`/`claimable_of`/`count`.
 - **Reuse.** Self-resolving prediction markets, parametric payouts, event escrows.
+- **Payout.** Winning side splits the whole pool pro-rata by stake (integer floor, so the pull ledger can only under-credit, never over-credit); REFUND returns each stake. A judged winner with an empty pool falls back to REFUND.

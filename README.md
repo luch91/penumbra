@@ -72,7 +72,7 @@ Status legend: ✅ built and live-smoke-tested on studionet (deploy + method cal
 19. ✅ **EscalatingVerdict** — a dispute primitive whose consensus rigor scales with stakes: `strict_eq` for pennies, `comparative` mid, multi-lens `non_comparative` review for serious money. Tiered, economical consensus. → `contracts/escalating_verdict.py`
 
 ### VIII · Markets of Meaning — *economic primitives with judgment baked in*
-20. ◻️ **RealitySettledMarket** — a binary market that self-settles from primary sources with an ambiguity guard: when sources conflict, it refuses to settle and refunds rather than guess. Prediction-market settlement done safely.
+20. ✅ **RealitySettledMarket** — a binary market that self-settles from primary sources with an ambiguity guard: when sources conflict or are too weak, it refuses to settle and refunds every stake rather than guess. The final primitive, composing the ambiguity gate and the guarded web fetch. → `contracts/reality_settled_market.py`
 
 ---
 
@@ -106,6 +106,7 @@ penumbra/
 │   ├── escalating_verdict.py
 │   ├── adversarial_review.py
 │   ├── equivalence_registry.py
+│   ├── reality_settled_market.py
 │   └── fixtures/              ← test-only stand-ins, not catalog primitives
 │       ├── audit_stub_target.py
 │       └── tripwire_callback_stub.py
@@ -129,7 +130,8 @@ penumbra/
     ├── test_canary_tripwire.py
     ├── test_escalating_verdict.py
     ├── test_adversarial_review.py
-    └── test_equivalence_registry.py
+    ├── test_equivalence_registry.py
+    └── test_reality_settled_market.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM — there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs.
