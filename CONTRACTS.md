@@ -33,6 +33,7 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 | 17 | AdversarialReview | `0x11442B968334d36C8b8A9EF6a30D2c159A1BB0B4` | `0x0bd9add453de03285d0b4d3482b37f48717a7dbc83cb6fb04935bcbc4e40a60a` | (none) |
 | 18 | EquivalenceRegistry | `0xad2649F4710627fEc20c947edA69EA8412f588b3` | `0xd4f40d5425723718056d1b3535f495e9b6bc15d6d6a95d75861983770e58642b` | (none) |
 | 19 | RealitySettledMarket | `0xC0cbb1Bf82D530D687e0f78892a4624Dd98Bd7e2` | `0x09fb38fce8e6c38128cfc256fa15265c01d6b7639fb47aca839f6f5b98169946` | `question="Did Apollo 11 land humans on the Moon in 1969?", resolution_urls="...Apollo_11,...Moon_landing", abstain_threshold_milli=600, tolerance_milli=250` |
+| 20 | ConstitutionalContract | `0x0B345558d3934d7091498709790dD5d901a76A4E` | `0xeeb71463b3263b5193d76f2ce5f7e4675e071376f2c3ad6c446e27c4f9188f41` | `core_principles="no treasury spend without a member vote", initial_body=""` |
 
 ---
 
