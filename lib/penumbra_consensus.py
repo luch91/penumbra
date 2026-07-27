@@ -1,14 +1,14 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# PENUMBRA — shared consensus helpers
+# PENUMBRA -- shared consensus helpers
 #
 # GenLayer Intelligent Contracts run as a SINGLE Python file inside the GenVM.
 # There is no `pip install` and no cross-file import at deploy time. So this is
-# not an importable module — it is a CURATED COPY-PASTE BLOCK. Drop the helpers
+# not an importable module -- it is a CURATED COPY-PASTE BLOCK. Drop the helpers
 # you need into the top of a contract, below `from genlayer import *`.
 #
 # Every helper here exists to make one thing explicit: the boundary between the
-# DETERMINISTIC world (storage, money, control flow — must be identical on every
-# validator) and the NON-DETERMINISTIC world (LLM calls, web reads — allowed to
+# DETERMINISTIC world (storage, money, control flow -- must be identical on every
+# validator) and the NON-DETERMINISTIC world (LLM calls, web reads -- allowed to
 # differ, reconciled by an Equivalence Principle).
 #
 # The cardinal rule, encoded in every pattern below:
@@ -92,7 +92,7 @@ def agree_meaning(inner, principle: str):
 def agree_integrity(inner, *, task: str, criteria: str):
     """
     prompt_non_comparative: the leader performs `task` on the input returned by
-    `inner`; validators do NOT redo the task — they only check that the leader's
+    `inner`; validators do NOT redo the task -- they only check that the leader's
     output satisfies `criteria`. This is the asymmetric principle: cheap to verify,
     expensive to produce. Use when generation is hard but checking is easy, and
     when the input is the same on every node (so there is nothing to disagree

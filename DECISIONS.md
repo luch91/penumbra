@@ -1,13 +1,13 @@
-# DECISIONS — Penumbra
+# DECISIONS -- Penumbra
 
 A running log of non-obvious decisions made while building this repo: what was
 chosen, why, and what it rules out. This is not a changelog (git history covers
-that) — it's the reasoning that isn't visible from reading the code alone.
+that) -- it's the reasoning that isn't visible from reading the code alone.
 Updated every session; newest entries at the top.
 
 ---
 
-## 2026-07-08 — Forcing JailbreakBounty's break-to-payout path: three real red-team attempts failed, so the test uses an unsatisfiable style rule instead
+## 2026-07-08 -- Forcing JailbreakBounty's break-to-payout path: three real red-team attempts failed, so the test uses an unsatisfiable style rule instead
 
 **Decision.** `tests/test_jailbreak_bounty.py` gained
 `test_impossible_style_rule_pays_out_challenger`, which finally exercises
@@ -71,7 +71,7 @@ and the full 6-test suite passed with no regressions.
 
 ---
 
-## 2026-07-08 — RealitySettledMarket (VIII.20), the final primitive: composing two proven patterns instead of inventing a third
+## 2026-07-08 -- RealitySettledMarket (VIII.20), the final primitive: composing two proven patterns instead of inventing a third
 
 **Decision.** Built `RealitySettledMarket` exactly as CONTRACTS.md's spec
 implies, as a composition of two mechanisms this repo had already verified
@@ -150,7 +150,7 @@ contract or a genuinely new addition beyond the original 20.
 
 ---
 
-## 2026-07-07 — EquivalenceRegistry (VI.17) is the one primitive that runs no consensus block at all, and needs no cross-contract WRITE
+## 2026-07-07 -- EquivalenceRegistry (VI.17) is the one primitive that runs no consensus block at all, and needs no cross-contract WRITE
 
 **Decision.** Built `EquivalenceRegistry` as pure deterministic CRUD:
 `register(name, text)` / `bump(name, text)` writes and `get`/`get_full`/
@@ -207,7 +207,7 @@ behavior to be lenient about.
 
 ---
 
-## 2026-07-04 — AdversarialReview (IV.11) uses non_comparative to make the LEADER stage its own debate, rather than judging a single unopposed opinion
+## 2026-07-04 -- AdversarialReview (IV.11) uses non_comparative to make the LEADER stage its own debate, rather than judging a single unopposed opinion
 
 **Decision.** Built `AdversarialReview.adjudicate(claim)` matching
 CONTRACTS.md's spec exactly: `non_comparative`, no deviation needed. The
@@ -265,7 +265,7 @@ non_comparative is for).
 
 ---
 
-## 2026-07-04 — EscalatingVerdict (VII.19) dispatches across all three graduated consensus moves in one contract, and reinterprets "multi-source" as multi-lens
+## 2026-07-04 -- EscalatingVerdict (VII.19) dispatches across all three graduated consensus moves in one contract, and reinterprets "multi-source" as multi-lens
 
 **Decision.** Built `EscalatingVerdict` as a genuine dispatcher: the same
 contract runs `strict_eq`, `comparative`, AND `non_comparative` --
@@ -342,7 +342,7 @@ unspecified parameters or silently downgrading the tier's rigor.
 
 ---
 
-## 2026-07-04 — CanaryTripwire (V.14) delivers the repo's first confirmed cross-contract WRITE, and reveals the callback is delivered asynchronously
+## 2026-07-04 -- CanaryTripwire (V.14) delivers the repo's first confirmed cross-contract WRITE, and reveals the callback is delivered asynchronously
 
 **Decision.** Built `CanaryTripwire` matching CONTRACTS.md's spec with no
 consensus-move deviation (`comparative` on a single `condition_met`
@@ -410,7 +410,7 @@ always deploy a real fixture contract first.
 
 ---
 
-## 2026-07-04 — ProvenanceAttestor (V.13) deviates from CONTRACTS.md's non_comparative to comparative; a wrong-conda-env ImportError looked like the SynSent flakiness at first
+## 2026-07-04 -- ProvenanceAttestor (V.13) deviates from CONTRACTS.md's non_comparative to comparative; a wrong-conda-env ImportError looked like the SynSent flakiness at first
 
 **Decision.** Built `ProvenanceAttestor.attest(claim, url)` with `comparative`,
 not the `non_comparative` CONTRACTS.md's one-line spec names. Each validator
@@ -477,7 +477,7 @@ will reproduce every time. Always `conda activate genlayer` and confirm
 
 ---
 
-## 2026-07-04 — CorroborationOracle (V.12) reuses SemanticDeadman's web-fetch guard at a new call site; a genuine TCP SynSent hang required a kill-and-retry, not just a re-run
+## 2026-07-04 -- CorroborationOracle (V.12) reuses SemanticDeadman's web-fetch guard at a new call site; a genuine TCP SynSent hang required a kill-and-retry, not just a re-run
 
 **Decision.** Built `CorroborationOracle.establish(question, urls)` matching
 CONTRACTS.md's spec with `comparative` on a two-field result
@@ -545,7 +545,7 @@ is only written at the end of a completed session.
 
 ---
 
-## 2026-07-03 — ConstitutionalContract (III.08) makes `core` immutable by simply never writing to it, and reuses AmbiguityGuard's delimited-string workaround for a second list-shaped parameter
+## 2026-07-03 -- ConstitutionalContract (III.08) makes `core` immutable by simply never writing to it, and reuses AmbiguityGuard's delimited-string workaround for a second list-shaped parameter
 
 **Decision.** Built `ConstitutionalContract` matching CONTRACTS.md's spec
 with no consensus-move deviation (`non_comparative` on deterministic
@@ -594,7 +594,7 @@ repo.
 
 ---
 
-## 2026-07-03 — SemanticDiffLedger (III.07) uses comparative even though both compared texts are deterministic input, unlike IntentLock
+## 2026-07-03 -- SemanticDiffLedger (III.07) uses comparative even though both compared texts are deterministic input, unlike IntentLock
 
 **Decision.** Built `SemanticDiffLedger.propose()` with the `comparative`
 equivalence principle CONTRACTS.md's spec names, even though `current`
@@ -639,7 +639,7 @@ move fits.
 
 ---
 
-## 2026-07-03 — IntentLock (III.06) found and fixed a new empty-string calldata bug; three gltest runs needed for a clean pass, purely from network flakiness
+## 2026-07-03 -- IntentLock (III.06) found and fixed a new empty-string calldata bug; three gltest runs needed for a clean pass, purely from network flakiness
 
 **Decision.** Built `IntentLock` per spec with no state-shape or
 consensus-move deviations (unlike SemanticCommitReveal/AmbiguityGuard/
@@ -699,7 +699,7 @@ guidance.
 
 ---
 
-## 2026-07-03 — SemanticCommitReveal (III.05) replaces timestamps with a phase state machine and a mutable TreeMap with two append-only DynArrays
+## 2026-07-03 -- SemanticCommitReveal (III.05) replaces timestamps with a phase state machine and a mutable TreeMap with two append-only DynArrays
 
 **Decision.** Built `SemanticCommitReveal` diverging from CONTRACTS.md's
 spec on two state-shape points while keeping its consensus description
@@ -759,7 +759,7 @@ patterns is actually verified live in this repo.
 
 ---
 
-## 2026-07-03 — Remaining-11 build order chosen: proven-pattern primitives first, shared-guard batch second, novel mechanisms last
+## 2026-07-03 -- Remaining-11 build order chosen: proven-pattern primitives first, shared-guard batch second, novel mechanisms last
 
 **Decision.** After PolyglotConsensus shipped, chose this order for the
 remaining primitives rather than the catalog's numeric order: (1) re-verify
@@ -801,7 +801,7 @@ least live verification on.
 
 ---
 
-## 2026-07-03 — SchellingResolver and ProofCarryingAnswer re-verified clean; 2026-07-02's TLS flakiness confirmed as a one-session network incident, not a recurring risk
+## 2026-07-03 -- SchellingResolver and ProofCarryingAnswer re-verified clean; 2026-07-02's TLS flakiness confirmed as a one-session network incident, not a recurring risk
 
 **Decision.** Re-ran `gltest --network studionet` against both suites with no
 code changes. `SchellingResolver`: 7/7 passed (265.06s), including the four
@@ -835,7 +835,7 @@ code changes in between, which has not happened here.
 
 ---
 
-## 2026-07-02 — PolyglotConsensus (II.04) mixes comparative (submit) with non_comparative (same_meaning), diverging from CONTRACTS.md's single-move spec
+## 2026-07-02 -- PolyglotConsensus (II.04) mixes comparative (submit) with non_comparative (same_meaning), diverging from CONTRACTS.md's single-move spec
 
 **Decision.** Built `PolyglotConsensus` with two different consensus moves
 for its two write methods, not one:
@@ -893,7 +893,7 @@ the one-line spec happens to mention.
 
 ---
 
-## 2026-07-02 — AmbiguityGuard (II.02) reuses DissensusOracle's ensemble trick instead of the catalog's literal "let consensus itself fail" wording
+## 2026-07-02 -- AmbiguityGuard (II.02) reuses DissensusOracle's ensemble trick instead of the catalog's literal "let consensus itself fail" wording
 
 **Decision.** Built `AmbiguityGuard` so the ABSTAIN decision is a
 deterministic threshold compare (`commit_fraction_milli >=
@@ -946,7 +946,7 @@ The spec describes behavior, not implementation.
 
 ---
 
-## 2026-07-02 — ConsensusThermometer (VI.15) built self-contained, no cross-contract calls needed
+## 2026-07-02 -- ConsensusThermometer (VI.15) built self-contained, no cross-contract calls needed
 
 **Decision.** Built `ConsensusThermometer` per its CONTRACTS.md spec exactly:
 `assess(task) -> route` runs a cheap `comparative` probe that predicts (never
@@ -987,7 +987,7 @@ State/API fields, which are the actual spec.
 
 ---
 
-## 2026-07-02 — Full gltest sweep across all 6 contracts: ASCII fix holds, JailbreakBounty payable path confirmed, session hit real network flakiness on 2 suites
+## 2026-07-02 -- Full gltest sweep across all 6 contracts: ASCII fix holds, JailbreakBounty payable path confirmed, session hit real network flakiness on 2 suites
 
 **Decision.** Ran `gltest --network studionet` against all six contracts to
 confirm the 2026-07-01 ASCII fix (see entry below) generalizes across the
@@ -997,7 +997,7 @@ whole repo, per explicit request. Final results:
 - `MirrorAudit`: 5/5 PASSED + isolation test 1/1 PASSED (verified earlier
   this session, unchanged).
 - `SemanticDeadman`: 6/6 PASSED (verified earlier this session, unchanged).
-- `JailbreakBounty`: 5/5 PASSED (clean) — **first-ever confirmation of the
+- `JailbreakBounty`: 5/5 PASSED (clean) -- **first-ever confirmation of the
   payable-fund path end-to-end.** `gltest`'s `.transact(value=N)` can send
   real payable value where the `genlayer` CLI cannot. Confirms `fund()`
   accepts and accumulates real value, and the owner-reclaim-then-withdraw
@@ -1005,19 +1005,19 @@ whole repo, per explicit request. Final results:
   path remains unconfirmed (no test forces the LLM to judge an attempt as a
   successful jailbreak).
 - `SchellingResolver`: 2/7 passed cleanly across two full-suite attempts
-  (`test_deploys_empty`, `test_submit_requires_stake` — both deterministic
+  (`test_deploys_empty`, `test_submit_requires_stake` -- both deterministic
   structural tests, confirming no code regression); the other 5, all on the
   payable/resolve path, were blocked by network flakiness both times. Left
   open, needs re-running.
 - `ProofCarryingAnswer`: 4 attempts, 0 clean passes (1 test passed on one
-  attempt, isolated) — entirely blocked by network flakiness. Left open,
+  attempt, isolated) -- entirely blocked by network flakiness. Left open,
   needs re-running.
 
 **Why.** Mid-sweep, `gltest` runs against `ProofCarryingAnswer` and
 `SchellingResolver` started intermittently failing with a family of TLS
 errors (`SSLV3_ALERT_ILLEGAL_PARAMETER`, `SSLV3_ALERT_BAD_RECORD_MAC`,
 `[SSL] record layer failure`, `RemoteDisconnected`) against
-`studio.genlayer.com` — distinct from the DNS-resolution blips noted
+`studio.genlayer.com` -- distinct from the DNS-resolution blips noted
 elsewhere in this file. Ruled out as a hard outage or a code regression on
 several grounds: a single raw `requests.post()` to the same endpoint
 succeeded cleanly mid-episode; `DissensusOracle` and `JailbreakBounty` both
@@ -1031,7 +1031,7 @@ cycles chasing a session-local network condition) before deciding to leave
 them open rather than claim false confirmation.
 
 Also confirmed a local environment gotcha along the way: this Bash tool's
-shell does not persist `conda activate genlayer` across tool calls — a
+shell does not persist `conda activate genlayer` across tool calls -- a
 `gltest` invocation without re-activating in the same command resolves to
 the bare miniconda Python 3.11.4, which fails immediately with
 `ImportError: cannot import name 'Buffer' from 'collections.abc'` (that ABC
@@ -1040,19 +1040,19 @@ was added in 3.12). Not a gltest or contract bug; just needs
 command every time.
 
 **How to apply.** The ASCII fix is now confirmed to generalize across all 6
-contracts, not just the 2 verified on 2026-07-01 — no further action needed
+contracts, not just the 2 verified on 2026-07-01 -- no further action needed
 there. `SchellingResolver` and `ProofCarryingAnswer` need a straight
 re-run of `gltest --network studionet tests/test_schelling_resolver.py` and
 `tests/test_proof_carrying_answer.py` in a future session once network
 conditions are normal; no code changes are indicated by anything seen this
 session. If a future `gltest` run hits the same TLS/connection error family,
-retry once or twice and move on — don't chase it indefinitely, and don't
+retry once or twice and move on -- don't chase it indefinitely, and don't
 mistake it for a contract regression just because a "trivial" structural
 test (like `test_deploys_empty`) happens to be the one that failed first.
 
 ---
 
-## 2026-07-01 — gltest actually works now: root cause was non-ASCII characters, not funding or connectivity
+## 2026-07-01 -- gltest actually works now: root cause was non-ASCII characters, not funding or connectivity
 
 **Decision.** Stripped every non-ASCII character (middle dot `.`, em dash `--`,
 ellipsis `...`, box-drawing divider `-`) from every file under `contracts/`
@@ -1070,18 +1070,18 @@ reproducing it directly: the schema-fetch call
 (`client.get_contract_schema_for_code(contract_code=...)`) raises
 `UnicodeEncodeError: 'ascii' codec can't encode characters ...` the instant
 the contract's source contains ANY non-ASCII character. Proved this precisely
-by deploying two versions of the same fixture via gltest — one containing a
+by deploying two versions of the same fixture via gltest -- one containing a
 single em dash (failed every time, same error) and one that was pure ASCII
 (passed cleanly). `gltest`'s own internal logger, which would have surfaced
 this immediately as a per-client warning, is `disabled = True` by default
-(`gltest/logging.py`) — that's why three separate debugging attempts (config
+(`gltest/logging.py`) -- that's why three separate debugging attempts (config
 fix, env-var fix, the funding guess) all only ever saw the generic top-level
 `ValueError` with zero clue why.
 
   Every contract in this repo used an em dash, a middle dot (in the
   `PENUMBRA . <family> . <number>` header line), box-drawing dividers (in the
   `# -- section --` comments, 164-406 occurrences PER FILE), and one ellipsis
-  throughout its docstring — meaning `gltest` had never actually worked
+  throughout its docstring -- meaning `gltest` had never actually worked
   against any real Penumbra contract before this was found, regardless of
   which contract was being tested. This wasn't a MirrorAudit-specific problem
   at all.
@@ -1093,7 +1093,7 @@ fix, env-var fix, the funding guess) all only ever saw the generic top-level
   full suites: `test_mirror_audit.py` (5/5 passed, including the live
   LLM-judgment conformance tests) and `test_semantic_deadman.py` (6/6 passed;
   2 initial failures were a transient DNS blip resolving
-  `studio.genlayer.com`, confirmed by an immediate clean retry — not a
+  `studio.genlayer.com`, confirmed by an immediate clean retry -- not a
   regression).
 
 **How to apply.** Any new contract file (family AmbiguityGuard onward) must
@@ -1103,25 +1103,25 @@ would silently break `gltest` while still passing `py_compile` and every
 `genlayer` CLI smoke test (the CLI path doesn't go through this schema-fetch
 call, so it never surfaced the bug all session). Before assuming a fresh
 gltest failure is a connectivity/funding/account issue again, check for
-non-ASCII characters first — `python3 -c "print([c for c in open(f).read() if ord(c)>127])"`
+non-ASCII characters first -- `python3 -c "print([c for c in open(f).read() if ord(c)>127])"`
 is enough to confirm in one line.
 
 ---
 
-## 2026-07-01 — MirrorAudit: confirmed cross-contract reads, found an uncatchable dispatch fault, and a gltest infra gap
+## 2026-07-01 -- MirrorAudit: confirmed cross-contract reads, found an uncatchable dispatch fault, and a gltest infra gap
 
 **Decision.** Before writing `MirrorAudit`, ran a live isolation test first
 (same methodology as every other unverified surface in this repo): deployed a
 throwaway stub target contract (`get_label() -> str`, `get_count() -> int`)
 and a probe contract that calls
 `gl.get_contract_at(addr).view().<method>()` against it. Confirmed the untyped
-proxy returns the value DIRECTLY — a plain `str`/`int`, not a wrapper — exactly
+proxy returns the value DIRECTLY -- a plain `str`/`int`, not a wrapper -- exactly
 as CLAUDE.md's "Contract-to-contract" convention already assumed but had never
 tested. Built `MirrorAudit` on top of that with `_read_target_status()`
 expecting the target to expose `status() -> str` (an explicit, documented
 assumption, since CONTRACTS.md's one-liner spec doesn't name a method
 convention), and live-tested `audit()` against a real deployed `SemanticDeadman`
-instance with both a true and a deliberately false spec — both judged
+instance with both a true and a deliberately false spec -- both judged
 correctly.
 
 **Why.** This is the first time any contract in this repo has actually
@@ -1136,7 +1136,7 @@ necessary before shipping a contract whose entire purpose depends on it.
   uncatchable runner-level dispatch fault
   (`ValueError: call to private method
   <function Contract.__handle_undefined_method__...>`), raised while GenVM
-  resolves the method against the TARGET's own execution context — a
+  resolves the method against the TARGET's own execution context -- a
   different, less recoverable failure mode than `gl.nondet.web.render`'s
   catchable `NondetException` (see the entry below). The outcome is still
   safe (every validator agrees the call errors, the transaction reverts
@@ -1148,7 +1148,7 @@ necessary before shipping a contract whose entire purpose depends on it.
   A third, informal and unconfirmed observation: probing `gl.get_contract_at`
   against a synthetic address with NO deployed contract at all (not a real
   target, not even a nonexistent-method case) caused a write transaction to
-  never reach a terminal status — the CLI timed out waiting for `ACCEPTED`.
+  never reach a terminal status -- the CLI timed out waiting for `ACCEPTED`.
   This was not reproduced deliberately enough to treat as a confirmed rule,
   but it's a real enough signal that "audit an arbitrary, unverified address"
   should be treated as a possible-hang risk, not just a possible-revert risk,
@@ -1157,12 +1157,12 @@ necessary before shipping a contract whose entire purpose depends on it.
   A fourth, separate finding while trying to run `gltest` for the first time
   in this repo's history: `gltest.config.yaml`'s `studionet:` key had no
   value, which YAML parses as `null`, but gltest requires every network entry
-  to be a dict — fixed to `studionet: {}`. Deeper problem, NOT fixed, and
+  to be a dict -- fixed to `studionet: {}`. Deeper problem, NOT fixed, and
   CORRECTED here after an initial wrong guess: every attempted deploy via
   `gltest` itself fails with `ValueError: Failed to get schema from all
   clients (default, hosted studio, and local)`. The first draft of this entry
   guessed this was because gltest's `default_account` fixture generates a
-  fresh, unfunded keypair with no GEN for gas — Judith corrected this: studionet
+  fresh, unfunded keypair with no GEN for gas -- Judith corrected this: studionet
   does not require gas fees at all, and this repo's own `genlayer` CLI account
   sat at 0 GEN through every successful deploy this session, which already
   disproved the guess before it was even checked against gltest's source.
@@ -1170,26 +1170,26 @@ necessary before shipping a contract whose entire purpose depends on it.
   confirms the real mechanism: it fetches the schema from the contract's
   SOURCE CODE via `get_contract_schema_for_code(...)`, independent of any
   account balance, tried against three separately-configured clients
-  ("default", "hosted studio", "local") in turn. All three failed here — the
+  ("default", "hosted studio", "local") in turn. All three failed here -- the
   actual cause is an unconfirmed client-connectivity/configuration gap in this
   shell, not a funding gap. This repo's actual verification path remains the
   live `genlayer` CLI, not `gltest`, until the real cause is found.
 
 **How to apply.** Any future contract using `gl.get_contract_at` for reads can
-now cite this entry as confirmation the read shape works — no need to
+now cite this entry as confirmation the read shape works -- no need to
 re-isolate that specific question. But: (1) never assume a target implements
-whatever method you call — wrap it, but know the wrap won't always produce a
+whatever method you call -- wrap it, but know the wrap won't always produce a
 clean message; (2) never audit or read from a caller-supplied, unverified
 address without accepting the (unconfirmed but observed) hang risk; (3) don't
 assume studionet needs GEN/gas for anything other than an actual `payable`
-value transfer — it doesn't, and this repo has now disproven the opposite
+value transfer -- it doesn't, and this repo has now disproven the opposite
 guess twice. (The gltest failure mentioned above as a "client-connectivity
-gap" was itself a wrong guess, corrected two entries up — it was a non-ASCII
+gap" was itself a wrong guess, corrected two entries up -- it was a non-ASCII
 encoding bug, not connectivity.)
 
 ---
 
-## 2026-07-01 — SemanticDeadman: `gl.message.datetime` doesn't exist on this runner; switched to content-diffing
+## 2026-07-01 -- SemanticDeadman: `gl.message.datetime` doesn't exist on this runner; switched to content-diffing
 
 **Decision.** `SemanticDeadman` was first written to pass `gl.message.datetime`
 (last-confirmed-alive and current, as opaque strings) into the LLM prompt,
@@ -1198,19 +1198,19 @@ it in Python. Deploying that version live immediately reverted with
 `AttributeError: 'MessageType' object has no attribute 'datetime'`. A
 throwaway isolation probe (`dir(gl.message)`, deployed and read live) confirmed
 this pinned runner's `gl.message` exposes ONLY `chain_id`, `contract_address`,
-`origin_address`, `sender_address`, `value` — no datetime, no block number, no
+`origin_address`, `sender_address`, `value` -- no datetime, no block number, no
 clock at all, despite `.datetime` being documented in the SDK's own published
 API text. The contract was redesigned to drop time entirely: `last_alive_ts`
 became `last_alive_snapshot`, a short LLM-produced description of the most
 recent observed activity, and `poke()` now asks the model whether the freshly
-fetched source has visibly ADVANCED beyond that stored snapshot — pure content
+fetched source has visibly ADVANCED beyond that stored snapshot -- pure content
 diffing, no clock involved anywhere.
 
 **Why.** There was no fallback option once the isolation probe confirmed the
 attribute truly does not exist (this isn't a format-uncertainty problem to
 work around, it's a nonexistent API on this runner). Content-diffing turned
 out to fit the contract's own thesis better anyway: "semantic inactivity, not
-a missed timestamp ping" is arguably more honest without a clock at all — a
+a missed timestamp ping" is arguably more honest without a clock at all -- a
 timestamp comparison would have been a slightly-dressed-up heartbeat check,
 whereas asking "has this source's observable content moved forward" is the
 actually-semantic version of liveness.
@@ -1219,7 +1219,7 @@ actually-semantic version of liveness.
   deliberately dead URL: `gl.nondet.web.render()` raises an uncaught
   `NondetException` on fetch failure (confirmed cause: `TLD_FORBIDDEN` for a
   `.invalid` test domain; a second test against a resolvable-but-nonexistent
-  `.com` domain also triggered the same uncaught-exception path) — the
+  `.com` domain also triggered the same uncaught-exception path) -- the
   original code let this propagate and abort the whole `poke()` transaction,
   even though the prompt text already claimed "a fetch error counts as NOT
   alive." Fixed by wrapping the `render()` call in `try/except` inside the
@@ -1230,12 +1230,12 @@ actually-semantic version of liveness.
 **How to apply.** Do not reintroduce `gl.message.datetime`, or assume any
 clock/timestamp/block-number accessor exists, anywhere in this repo without
 re-running the exact same isolation probe first (deploy a throwaway contract
-that dumps `dir(gl.message)`, read it live) — the SDK's published docs are not
+that dumps `dir(gl.message)`, read it live) -- the SDK's published docs are not
 reliable evidence that an attribute exists on this pinned runner build; only a
 live deploy is. Separately: any contract that calls `gl.nondet.web.render`/
 `.get` inside a nondet closure must wrap the call in `try/except` and decide
 deliberately what a fetch failure should mean for consensus, rather than
-letting an uncaught `NondetException` abort the transaction — add this to the
+letting an uncaught `NondetException` abort the transaction -- add this to the
 "Mark the unverified surfaces" checklist for every future web-fetching
 contract (CorroborationOracle, ProvenanceAttestor, CanaryTripwire,
 RealitySettledMarket all touch this same surface).
@@ -1245,7 +1245,7 @@ RealitySettledMarket all touch this same surface).
 ## Template for new entries
 
 ```
-## YYYY-MM-DD — <short title>
+## YYYY-MM-DD -- <short title>
 
 **Decision.** <what was chosen>
 

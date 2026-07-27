@@ -6,7 +6,7 @@ Tests for SchellingResolver.
 The resolver's guarantees are structural: submissions require a stake,
 resolution needs a minimum crowd, the pull-payment ledger balances, and
 preconditions revert cleanly. The clustering outcome itself is asserted only
-on shape (a non-empty winning set, a share that fits the pool) — never on
+on shape (a non-empty winning set, a share that fits the pool) -- never on
 which exact indices the model picks, since that is genuinely non-deterministic
 LLM judgment.
 """

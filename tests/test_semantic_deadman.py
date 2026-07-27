@@ -8,7 +8,7 @@ Unlike JailbreakBounty/SchellingResolver, poke() and check_in() are plain
 the CLI payable-value limitation. Guarantees asserted are structural: only the
 owner can check_in(), the switch releases exactly once and stays released,
 claim() follows the pull-payment ledger, and a genuinely unreachable liveness
-source is judged not-alive (a deterministic, clear-cut case — a real fetch
+source is judged not-alive (a deterministic, clear-cut case -- a real fetch
 failure, not a borderline LLM opinion). We never assert the exact wording of
 an "alive" judgment against a live, ambiguous source, since that is genuinely
 non-deterministic model opinion.
@@ -58,7 +58,7 @@ def test_dead_source_releases_and_pays_out():
     assert status["released"] is True
 
     # No treasury was ever funded (payable fund() is untestable via this
-    # harness's CLI-equivalent path — see CLAUDE.md), so nothing is owed, but
+    # harness's CLI-equivalent path -- see CLAUDE.md), so nothing is owed, but
     # the release itself must be permanent and idempotent-safe.
     owed = c.claimable_of(args=[BENEFICIARY]).call()
     assert owed == status["treasury"]

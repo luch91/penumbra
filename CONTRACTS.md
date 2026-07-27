@@ -41,7 +41,7 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 
 ### 1. DissensusOracle ✅ `contracts/dissensus_oracle.py`
 - **Purpose.** Answer a contested question and publish how contested it is, as a `dissensus` score in milli-units [0..1000].
-- **Consensus.** `comparative`. The leader self-ensembles K independent expert opinions and reports `{verdict, agreement}`. The principle requires validators to agree on the verdict *and* on the agreement ratio within a tolerance — so the network must concur on the difficulty, not just the answer. Unstable difficulty fails consensus and the oracle declines to speak.
+- **Consensus.** `comparative`. The leader self-ensembles K independent expert opinions and reports `{verdict, agreement}`. The principle requires validators to agree on the verdict *and* on the agreement ratio within a tolerance -- so the network must concur on the difficulty, not just the answer. Unstable difficulty fails consensus and the oracle declines to speak.
 - **State.** Append-only `DynArray[Record]` archive (`question, verdict, dissensus_milli, sample_size`) + `latest` index. Integer milli-units keep probabilities exact on-chain.
 - **API.** `resolve(question) -> verdict` · `latest_verdict()` · `get(id)` · `is_contested(id, threshold_milli) -> bool`.
 - **Reuse.** Gate any high-stakes judgment: only execute when `dissensus < threshold`.
@@ -114,7 +114,7 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 
 ### 9. JailbreakBounty ✅ `contracts/jailbreak_bounty.py`
 - **Purpose.** Pay a challenger iff the network agrees their prompt broke a sworn rule. Trustless red-team market.
-- **Consensus.** `comparative` keyed only on the `violated` boolean. Each validator runs its own guarded model *and* its own judge; payout requires independent agreement that a violation occurred — rewarding robust, transferable breaks, not one-off lucky samples.
+- **Consensus.** `comparative` keyed only on the `violated` boolean. Each validator runs its own guarded model *and* its own judge; payout requires independent agreement that a violation occurred -- rewarding robust, transferable breaks, not one-off lucky samples.
 - **State & money.** Payable `fund()` accumulates `bounty`; a win closes `open` and credits the challenger's `claimable` (pull-payment). `withdraw()` debits the ledger and marks the native/ERC-20 transfer hook. `reclaim_unclaimed()` lets the owner retire an unbroken pool.
 - **API.** `fund()` payable · `attempt(prompt) -> bool` · `withdraw()` · `status()` · `winning_attack()`.
 - **Reuse.** Bug-bounty markets for any plain-language guardrail: filters, refusals, compliance rules.
@@ -184,8 +184,8 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 
 ### 17. EquivalenceRegistry ✅ `contracts/equivalence_registry.py`
 - **Purpose.** Make equivalence principles reusable, named, on-chain objects.
-- **Consensus.** *None applied within* — the first primitive here that runs no non-deterministic block at all. Registry CRUD is plain deterministic writes/views; the consensus USE happens downstream, in whichever contract fetches a principle via contract-to-contract `view()` and feeds it into its own `comparative`/`non_comparative` call.
-- **State.** `principles: TreeMap[str, Principle]` (text, author) for content, plus a parallel `versions: TreeMap[str, u256]` existence/version index (0 = never registered) — kept separate so the "does this key exist" check never touches a possibly-absent record. `author` is fixed at registration; only that address may `bump()`.
+- **Consensus.** *None applied within* -- the first primitive here that runs no non-deterministic block at all. Registry CRUD is plain deterministic writes/views; the consensus USE happens downstream, in whichever contract fetches a principle via contract-to-contract `view()` and feeds it into its own `comparative`/`non_comparative` call.
+- **State.** `principles: TreeMap[str, Principle]` (text, author) for content, plus a parallel `versions: TreeMap[str, u256]` existence/version index (0 = never registered) -- kept separate so the "does this key exist" check never touches a possibly-absent record. `author` is fixed at registration; only that address may `bump()`.
 - **API.** `register(name, text)` · `bump(name, text)` (author-only) · `get(name) -> text` · `get_full(name) -> json` · `exists(name)` · `version_of(name)`.
 - **Reuse.** Shared, audited "definitions of agreement" across an ecosystem: one canonical principle a DAO can tighten once and update every consumer at once.
 
@@ -196,7 +196,7 @@ Fresh instances of all 12 built primitives, deployed 2026-07-03 for submission. 
 ### 18. SemanticDeadman ✅ `contracts/semantic_deadman.py`
 - **Purpose.** A dead-man's switch keyed to *genuine* activity, not a mechanical heartbeat.
 - **Consensus.** `comparative`: validators fetch the liveness source (e.g. a public profile/feed) and agree on whether meaningful recent activity exists.
-- **State.** `owner`, `beneficiary`, `last_alive_snapshot` (LLM-produced activity description; no timestamp — this runner has no clock/`gl.message.datetime`, see CLAUDE.md), `liveness_url`, `liveness_policy`, `treasury`, `released: bool`.
+- **State.** `owner`, `beneficiary`, `last_alive_snapshot` (LLM-produced activity description; no timestamp -- this runner has no clock/`gl.message.datetime`, see CLAUDE.md), `liveness_url`, `liveness_policy`, `treasury`, `released: bool`.
 - **API.** `check_in()` (owner) · `poke() -> released: bool` · `claim()` (beneficiary) · `fund()` (payable).
 - **Reuse.** Inheritance, key-rotation fallback, abandoned-treasury recovery.
 

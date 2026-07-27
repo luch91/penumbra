@@ -5,9 +5,9 @@ Tests for MirrorAudit.
 
 MirrorAudit's core novelty is the cross-contract read, which is deterministic
 (pinned separately and fast in test_mirror_audit_read.py). These tests assert
-the ledger's structural guarantees plus two clear-cut conformance judgments —
+the ledger's structural guarantees plus two clear-cut conformance judgments --
 a spec that is transparently true of the target's real reported state, and one
-that transparently contradicts it — never a borderline LLM opinion.
+that transparently contradicts it -- never a borderline LLM opinion.
 """
 
 import json
