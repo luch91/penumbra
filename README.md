@@ -34,9 +34,9 @@ The mission bar is explicit: no hello-worlds, no thin LLM wrappers, no "AI decid
 
 ---
 
-## Submission guide: start with these two primitives
+## Submission guide: the full project
 
-Penumbra is a catalog, but reviewers do not need to understand all twenty contracts to evaluate the core contribution. The two flagship implementations below are deliberately different: one turns disagreement into an explicit data product, while the other uses consensus to protect a financial state transition.
+Penumbra is a complete catalog of 20 standalone GenLayer Intelligent Contract primitives in eight families. The project explores how agreement, disagreement, semantic equivalence, web evidence, and validator roles can become reusable contract logic. The two examples below are entry points into the full project. They show two different patterns, but they do not represent the complete scope of Penumbra.
 
 ### Flagship 1: [DissensusOracle](https://github.com/luch91org/penumbra/blob/main/contracts/dissensus_oracle.py)
 
@@ -57,6 +57,10 @@ The non-deterministic judgment is isolated from exact accounting, settlement is 
 - [Contract source](https://github.com/luch91org/penumbra/blob/main/contracts/reality_settled_market.py)
 - [Integration tests](https://github.com/luch91org/penumbra/blob/main/tests/test_reality_settled_market.py)
 - [Full specification](https://github.com/luch91org/penumbra/blob/main/CONTRACTS.md)
+
+### Full project coverage
+
+The catalog below covers all 20 contracts. Each contract has its own source file, public API, state model, and integration test. The project includes uncertainty oracles, proof verification, semantic state machines, adversarial mechanisms, web corroboration, meta-consensus, liveness primitives, and markets with ambiguity-safe settlement.
 
 ### Reviewer links
 
