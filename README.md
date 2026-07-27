@@ -34,6 +34,38 @@ The mission bar is explicit: no hello-worlds, no thin LLM wrappers, no "AI decid
 
 ---
 
+## Submission guide: start with these two primitives
+
+Penumbra is a catalog, but reviewers do not need to understand all twenty contracts to evaluate the core contribution. The two flagship implementations below are deliberately different: one turns disagreement into an explicit data product, while the other uses consensus to protect a financial state transition.
+
+### Flagship 1: [DissensusOracle](https://github.com/luch91org/penumbra/blob/main/contracts/dissensus_oracle.py)
+
+`DissensusOracle.resolve(question)` asks for a self-ensemble of independent expert opinions, records the majority verdict, and stores disagreement as an integer `dissensus_milli` score. The score is persisted in an append-only record and exposed through `is_contested()`, so another contract or application can refuse to act when a question is too contested.
+
+Each validator independently runs the ensemble, and `prompt_comparative` requires agreement on both the verdict's meaning and the agreement level within a configured tolerance. A question therefore fails safely when validators cannot agree even on how difficult or contested it is. This is a reusable uncertainty gate for fraud review, delivery disputes, moderation, and other high-stakes judgments.
+
+- [Contract source](https://github.com/luch91org/penumbra/blob/main/contracts/dissensus_oracle.py)
+- [Integration tests](https://github.com/luch91org/penumbra/blob/main/tests/test_dissensus_oracle.py)
+- [Full specification](https://github.com/luch91org/penumbra/blob/main/CONTRACTS.md)
+
+### Flagship 2: [RealitySettledMarket](https://github.com/luch91org/penumbra/blob/main/contracts/reality_settled_market.py)
+
+`RealitySettledMarket` is a binary market whose settlement decision comes from multiple web sources. Bettors deposit YES or NO stakes into deterministic pools. On `settle()`, validators independently fetch and assess the configured sources; the market settles only when the evidence is sufficiently corroborated and unambiguous. Otherwise it records `REFUND` and credits every bettor their original stake through a pull-payment ledger.
+
+The non-deterministic judgment is isolated from exact accounting, settlement is one-way, bets close after settlement, and the tests assert that refunds and payouts never over-credit the pool. It is a reusable pattern for evidence-backed markets, oracle-gated escrows, and contracts where refusing to guess is safer than producing a weak verdict.
+
+- [Contract source](https://github.com/luch91org/penumbra/blob/main/contracts/reality_settled_market.py)
+- [Integration tests](https://github.com/luch91org/penumbra/blob/main/tests/test_reality_settled_market.py)
+- [Full specification](https://github.com/luch91org/penumbra/blob/main/CONTRACTS.md)
+
+### Reviewer links
+
+- [Repository](https://github.com/luch91org/penumbra)
+- [All contract specifications](https://github.com/luch91org/penumbra/blob/main/CONTRACTS.md)
+- [Engineering decisions and live-run findings](https://github.com/luch91org/penumbra/blob/main/DECISIONS.md)
+- [All integration tests](https://github.com/luch91org/penumbra/tree/main/tests)
+- [All standalone contract source files](https://github.com/luch91org/penumbra/tree/main/contracts)
+- [Consensus helper reference](https://github.com/luch91org/penumbra/blob/main/lib/penumbra_consensus.py)
 ## The catalog — 20 primitives in 8 families
 
 Status legend: ✅ built and live-smoke-tested on studionet (deploy + method calls, not just syntax) · ◻️ specified, scheduled in the build queue.
