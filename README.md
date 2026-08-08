@@ -72,7 +72,7 @@ The catalog below covers all 20 contracts. Each contract has its own source file
 - [Consensus helper reference](https://github.com/luch91org/penumbra/blob/main/lib/penumbra_consensus.py)
 ## The catalog -- 20 primitives in 8 families
 
-Status legend: ✅ source and integration tests present; historical live-smoke evidence is retained in the catalog but affected contracts require redeployment after the consensus and transfer fixes.
+Status legend: ✅ source and integration tests present; current deployment evidence is recorded for the affected contracts; the remaining historical addresses are identified in the catalog.
 
 ### I · Oracles of Doubt -- *disagreement as signal*
 1. ✅ **DissensusOracle** -- answers a contested question *and* publishes a `dissensus` score by self-ensembling K expert opinions; the comparative principle forces validators to agree on both the verdict and how hard the question was. Downstream contracts gate on it. → `contracts/dissensus_oracle.py`

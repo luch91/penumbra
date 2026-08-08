@@ -84,6 +84,10 @@ def test_focal_cluster_wins_and_pool_splits():
         owed = c.claimable_of(args=[rec["submitter"]]).call()
         assert owed > 0
         assert owed <= 3000
+        assert tx_execution_succeeded(
+            c.connect(account=rec["submitter"]).claim().transact()
+        )
+        assert c.claimable_of(args=[rec["submitter"]]).call() == 0
 
 
 def test_double_resolve_reverts():

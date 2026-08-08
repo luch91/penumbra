@@ -23,9 +23,13 @@ BENEFICIARY = "0x1111111111111111111111111111111111111111"
 DEAD_URL = "https://this-domain-genuinely-does-not-exist-penumbra-test-8842.com/"
 
 
-def _deploy(url=DEAD_URL, policy="Alive only if the page loads and shows a recent, dated public post."):
+def _deploy(
+    url=DEAD_URL,
+    policy="Alive only if the page loads and shows a recent, dated public post.",
+    beneficiary=BENEFICIARY,
+):
     factory = get_contract_factory("SemanticDeadman")
-    return factory.deploy(args=[BENEFICIARY, url, policy])
+    return factory.deploy(args=[beneficiary, url, policy])
 
 
 def test_deploys_armed():
@@ -50,18 +54,21 @@ def test_claim_without_balance_reverts():
 
 
 def test_dead_source_releases_and_pays_out():
-    c = _deploy()
+    beneficiary = create_account()
+    c = _deploy(beneficiary=beneficiary.address)
+    assert tx_execution_succeeded(c.fund().transact(value=1000))
     receipt = c.poke().transact()
     assert tx_execution_succeeded(receipt)
 
     status = json.loads(c.status().call())
     assert status["released"] is True
 
-    # No treasury was ever funded (payable fund() is untestable via this
-    # harness's CLI-equivalent path -- see CLAUDE.md), so nothing is owed, but
-    # the release itself must be permanent and idempotent-safe.
-    owed = c.claimable_of(args=[BENEFICIARY]).call()
-    assert owed == status["treasury"]
+    owed = c.claimable_of(args=[beneficiary.address]).call()
+    assert owed == 1000
+    assert tx_execution_succeeded(
+        c.connect(account=beneficiary).claim().transact()
+    )
+    assert c.claimable_of(args=[beneficiary.address]).call() == 0
 
 
 def test_poke_after_release_reverts():

@@ -133,6 +133,14 @@ def test_clear_market_settles_and_winner_takes_pool():
     else:  # REFUND
         assert yes_claim == 1000
         assert no_claim == 500
+        assert tx_execution_succeeded(
+            c.connect(account=yes_bettor).redeem().transact()
+        )
+        assert tx_execution_succeeded(
+            c.connect(account=no_bettor).redeem().transact()
+        )
+        assert c.claimable_of(args=[yes_bettor.address]).call() == 0
+        assert c.claimable_of(args=[no_bettor.address]).call() == 0
 
     # A settled market is closed: no re-settling, no new bets.
     assert not tx_execution_succeeded(c.settle().transact())
