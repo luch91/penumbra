@@ -13,7 +13,9 @@ The table records current deployments for affected contracts and historical depl
 
 Current redeployments for the affected primitives were completed on 2026-08-08. Network: `studionet` (`https://studio.genlayer.com/api`), runner `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6`. The table retains prior entries for unaffected contracts. Studio state can reset between sessions, so verify addresses before relying on them.
 
-**Verification status.** All contract and test files pass local Python compilation and whitespace checks. A full `gltest --network studionet tests` run and targeted payable runs exceeded their time limits without returning a test summary. Localnet transfer verification also requires Docker Desktop, which was unavailable in the execution environment. No live test pass count is claimed here.
+**Verification status.** All contract and test files pass local Python compilation and whitespace checks. Test collection reports 143 tests. Full `gltest --network studionet tests` runs exceeded their time limits without returning a test summary, so no full-suite pass count is claimed. Docker localnet is running, but it has no configured LLM validators. Live Studionet transfer checks are recorded below.
+
+**Live native transfer evidence.** The deployed `JailbreakBounty` accepted `1000` native units through `fund()`, then the owner completed `reclaim_unclaimed()` and `withdraw()`. The accepted withdrawal receipt recorded an outbound message of `value: 1000`; the final status reported `bounty: 0` and `open: false`. Additional payable deposits were accepted on the deployed `SchellingResolver` (`submit("blue")`, `1000`), `SemanticDeadman` (`fund()`, `1000`), and `RealitySettledMarket` (`bet("YES")`, `1000`). These checks used the GenLayer JavaScript SDK because the CLI write command has no native-value option.
 
 | # | Contract | Address | Deploy tx hash | Constructor args |
 |---|---|---|---|---|
