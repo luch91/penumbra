@@ -19,6 +19,8 @@ Current redeployments for the affected primitives were completed on 2026-08-08. 
 
 **Live flagship smoke checks.** `DissensusOracle.resolve("Is water wet under normal conditions?")` finalized with `verdict: "yes"`, `dissensus_milli: 430`, `sample_size: 7`, and `contested: false`. A follow-up `is_contested(0)` call returned `false`. The transaction hash was `0xd86d78a9263e8d4805ed6d156dfa36970ce755b079abf6e4336e103bed71874e`.
 
+**Additional live SDK checks.** `ConsensusThermometer.assess()` finalized with `routed_to: "DEFERRED"` and `predicted_agreement_milli: 400`. `AmbiguityGuard.judge()` finalized with `last_status: "yes"` and `abstain_count: 0`. `CorroborationOracle.establish()` finalized with `ratio_milli: 500`, `sources_count: 2`, and stored value `100 C`. `EscalatingVerdict.open_dispute()` accepted a `5000` unit stake, assigned the `COMPARATIVE` tier, and `resolve(0)` finalized with `resolved: true` and verdict `"Yes, prime"`.
+
 | # | Contract | Address | Deploy tx hash | Constructor args |
 |---|---|---|---|---|
 | 1 | DissensusOracle | `0x5625e62454aCA655dD26D0243A2301c7D3281584` | `0xe532190c81525772cf790b9be64c6eff6f55083c56c013b0ae9faae4f4264a14` | `ensemble_size=7, tolerance_milli=250, contested_threshold_milli=500` |
