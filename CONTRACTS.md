@@ -17,6 +17,8 @@ Current redeployments for the affected primitives were completed on 2026-08-08. 
 
 **Live native transfer evidence.** The deployed `JailbreakBounty` accepted `1000` native units through `fund()`, then the owner completed `reclaim_unclaimed()` and `withdraw()`. The accepted withdrawal receipt recorded an outbound message of `value: 1000`; the final status reported `bounty: 0` and `open: false`. Additional payable deposits were accepted on the deployed `SchellingResolver` (`submit("blue")`, `1000`), `SemanticDeadman` (`fund()`, `1000`), and `RealitySettledMarket` (`bet("YES")`, `1000`). The market then accepted `settle()` and `redeem()`, and its final status reported `outcome: "YES"`, `yes_pool: 1000`, and `no_pool: 0`. These checks used the GenLayer JavaScript SDK because the CLI write command has no native-value option.
 
+**Live flagship smoke checks.** `DissensusOracle.resolve("Is water wet under normal conditions?")` finalized with `verdict: "yes"`, `dissensus_milli: 430`, `sample_size: 7`, and `contested: false`. A follow-up `is_contested(0)` call returned `false`. The transaction hash was `0xd86d78a9263e8d4805ed6d156dfa36970ce755b079abf6e4336e103bed71874e`.
+
 | # | Contract | Address | Deploy tx hash | Constructor args |
 |---|---|---|---|---|
 | 1 | DissensusOracle | `0x5625e62454aCA655dD26D0243A2301c7D3281584` | `0xe532190c81525772cf790b9be64c6eff6f55083c56c013b0ae9faae4f4264a14` | `ensemble_size=7, tolerance_milli=250, contested_threshold_milli=500` |
