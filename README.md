@@ -50,7 +50,7 @@ Each validator independently runs the ensemble, and `prompt_comparative` require
 
 ### Flagship 2: [RealitySettledMarket](https://github.com/luch91org/penumbra/blob/main/contracts/reality_settled_market.py)
 
-`RealitySettledMarket` is a binary market whose settlement decision comes from multiple web sources. Bettors deposit YES or NO stakes into deterministic pools. On `settle()`, validators independently fetch and assess the configured sources; the market settles only when the evidence is sufficiently corroborated and unambiguous. Otherwise it records `REFUND` and credits every bettor their original stake through a pull-payment ledger.
+`RealitySettledMarket` is a binary market whose settlement decision comes from multiple web sources. Bettors deposit YES or NO stakes into deterministic pools. On `settle()`, validators independently fetch and assess the configured sources; the market settles only when the evidence is sufficiently corroborated and unambiguous. Otherwise it records `REFUND` and credits every bettor their original stake. A later `redeem()` call emits the native GEN transfer.
 
 The non-deterministic judgment is isolated from exact accounting, settlement is one-way, bets close after settlement, and the tests assert that refunds and payouts never over-credit the pool. It is a reusable pattern for evidence-backed markets, oracle-gated escrows, and contracts where refusing to guess is safer than producing a weak verdict.
 
@@ -72,7 +72,7 @@ The catalog below covers all 20 contracts. Each contract has its own source file
 - [Consensus helper reference](https://github.com/luch91org/penumbra/blob/main/lib/penumbra_consensus.py)
 ## The catalog -- 20 primitives in 8 families
 
-Status legend: ✅ built and live-smoke-tested on studionet (deploy + method calls, not just syntax) · ◻️ specified, scheduled in the build queue.
+Status legend: ✅ source and integration tests present; historical live-smoke evidence is retained in the catalog but affected contracts require redeployment after the consensus and transfer fixes.
 
 ### I · Oracles of Doubt -- *disagreement as signal*
 1. ✅ **DissensusOracle** -- answers a contested question *and* publishes a `dissensus` score by self-ensembling K expert opinions; the comparative principle forces validators to agree on both the verdict and how hard the question was. Downstream contracts gate on it. → `contracts/dissensus_oracle.py`

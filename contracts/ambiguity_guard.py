@@ -158,6 +158,7 @@ class AmbiguityGuard(gl.Contract):
         q = question.strip()
         k = int(self.ensemble_size)
         tol = int(self.tolerance_milli)
+        threshold = int(self.abstain_threshold_milli)
         opts_str = ", ".join(opts)
 
         def opinionate() -> str:
@@ -183,12 +184,14 @@ the options; low when it is ambiguous, underspecified, or genuinely contested.""
             leading = str(data["leading_option"]).strip()
             commit = float(data["commit_fraction"])
             commit = max(0.0, min(1.0, commit))
-            # Canonicalize: integer milli-units so strict structural fields match
-            # and the comparative principle has a stable surface to judge.
+            commit_milli = int(round(commit * _MILLI))
+            matched = next((o for o in opts if o.lower() == leading.lower()), None)
+            status = matched if matched is not None and commit_milli >= threshold else ABSTAIN
             return canonical(
                 {
                     "leading_option": leading,
-                    "commit_fraction_milli": int(round(commit * _MILLI)),
+                    "commit_fraction_milli": commit_milli,
+                    "status": status,
                 }
             )
 
@@ -196,27 +199,29 @@ the options; low when it is ambiguous, underspecified, or genuinely contested.""
             "The two results describe the same expert poll over the same fixed "
             "OPTIONS list. They are EQUIVALENT only if: (1) the 'leading_option' "
             "fields are the identical option string, and (2) the "
-            f"'commit_fraction_milli' values differ by at most {tol}. If the "
-            "leading options differ, or the commit levels are far apart, they "
+            f"'commit_fraction_milli' values differ by at most {tol}, and the "
+            "'status' fields must be identical. If the leading options differ, "
+            "the commit levels are far apart, or the action status differs, they "
             "are NOT equivalent."
         )
         agreed = gl.eq_principle.prompt_comparative(opinionate, principle)
         parsed = json.loads(agreed)
         leading = str(parsed["leading_option"])
         commit_milli = int(parsed["commit_fraction_milli"])
+        status = str(parsed["status"])
+        require(status == ABSTAIN or status in opts, "invalid status")
 
-        # Deterministic status decision -- no ambiguity left once consensus on
-        # (leading_option, commit_fraction_milli) has already been reached above.
+        # The status was part of the comparative result. Validate it against the
+        # score and option list, then use that agreed category as the action.
         matched = None
         for o in opts:
             if o.lower() == leading.lower():
                 matched = o
                 break
 
-        if matched is not None and commit_milli >= int(self.abstain_threshold_milli):
-            status = matched
-        else:
-            status = ABSTAIN
+        expected_status = matched if matched is not None and commit_milli >= threshold else ABSTAIN
+        require(status == expected_status, "status does not match consensus score")
+        if status == ABSTAIN:
             self.abstain_count = u256(int(self.abstain_count) + 1)
 
         rec = JudgeRecord(

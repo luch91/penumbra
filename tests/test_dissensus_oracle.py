@@ -60,4 +60,4 @@ def test_is_contested_gate():
     c = _deploy()
     c.resolve(args=["Will it definitely rain somewhere on Earth tomorrow?"]).transact()
     # With a permissive threshold the freshest record should read as not contested.
-    assert c.is_contested(args=[0, 900]).call() in (True, False)  # type returns bool
+    assert c.is_contested(args=[0]).call() in (True, False)  # type returns bool

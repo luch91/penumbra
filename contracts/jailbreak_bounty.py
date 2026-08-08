@@ -74,6 +74,19 @@ def parse_json_response(text: str) -> dict:
 # ------------------------------------------------------------------------------
 
 
+
+@gl.evm.contract_interface
+class _NativeRecipient:
+    class View:
+        pass
+
+    class Write:
+        pass
+
+
+def send_native(recipient: Address, amount: int) -> None:
+    _NativeRecipient(recipient).emit_transfer(value=u256(amount))
+
 class JailbreakBounty(gl.Contract):
     owner: Address
     rule: str                       # the policy the guarded model must uphold
@@ -174,11 +187,9 @@ Return ONLY strict JSON:
         who = gl.message.sender_address
         owed = int(self.claimable.get(who, u256(0)))
         require(owed > 0, "nothing to withdraw")
+        send_native(who, owed)
         self.claimable[who] = u256(0)
-        # INTEGRATION HOOK: to disburse native GEN or an ERC-20, perform the
-        # transfer of `owed` to `who` here (e.g. via gl.get_contract_at(token)
-        # .emit().transfer(who, owed)). The internal ledger above is the source
-        # of truth and has already been debited, so this stays reentrancy-safe.
+        # Native GEN transfer is emitted before the ledger is cleared.
         return owed
 
     @gl.public.write

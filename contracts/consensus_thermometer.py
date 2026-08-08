@@ -124,6 +124,7 @@ class ConsensusThermometer(gl.Contract):
         # nondet block, unlike anything that touches an LLM or the network.
         task_hash = hashlib.sha256(t.encode()).hexdigest()
         tol = int(self.tolerance_milli)
+        threshold = int(self.threshold_milli)
 
         def probe() -> str:
             prompt = f"""You are a fast, cheap TRIAGE step, not the real analysis. Do NOT solve
@@ -148,22 +149,29 @@ Return ONLY strict JSON, no prose, no markdown:
             predicted = max(0.0, min(1.0, predicted))
             # Canonicalize: integer milli-units so the comparative principle has
             # a stable, exact surface to judge (see NON-DETERMINISM rule 3).
+            predicted_milli = int(round(predicted * _MILLI))
+            route = "FULL" if predicted_milli >= threshold else "DEFERRED"
             return canonical(
-                {"predicted_agreement_milli": int(round(predicted * _MILLI))}
+                {
+                    "predicted_agreement_milli": predicted_milli,
+                    "route": route,
+                }
             )
 
         principle = (
             "The two results are estimates of how likely independent experts would "
             "agree on the same task. They are EQUIVALENT only if the "
-            f"'predicted_agreement_milli' values differ by at most {tol}."
+            f"'predicted_agreement_milli' values differ by at most {tol}, and "
+            "the 'route' fields must be identical. The route is FULL only when "
+            "the predicted agreement clears the configured threshold."
         )
         agreed = gl.eq_principle.prompt_comparative(probe, principle)
         parsed = json.loads(agreed)
         predicted_milli = int(parsed["predicted_agreement_milli"])
-
-        # Deterministic routing decision -- no ambiguity left once consensus on
-        # predicted_agreement_milli has already been reached above.
-        route = "FULL" if predicted_milli >= int(self.threshold_milli) else "DEFERRED"
+        route = str(parsed["route"])
+        require(route in ("FULL", "DEFERRED"), "invalid route")
+        expected_route = "FULL" if predicted_milli >= threshold else "DEFERRED"
+        require(route == expected_route, "route does not match predicted agreement")
 
         rec = Probe(
             task_hash=task_hash,

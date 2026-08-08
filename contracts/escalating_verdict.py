@@ -126,6 +126,19 @@ class Dispute:
     tier: str
 
 
+
+@gl.evm.contract_interface
+class _NativeRecipient:
+    class View:
+        pass
+
+    class Write:
+        pass
+
+
+def send_native(recipient: Address, amount: int) -> None:
+    _NativeRecipient(recipient).emit_transfer(value=u256(amount))
+
 class EscalatingVerdict(gl.Contract):
     owner: Address
     mid_threshold: u256
@@ -274,9 +287,9 @@ Return ONLY strict JSON, no prose, no markdown:
         require(gl.message.sender_address == self.owner, "only owner")
         amount = int(self.treasury)
         require(amount > 0, "treasury empty")
+        send_native(self.owner, amount)
         self.treasury = u256(0)
-        # INTEGRATION HOOK: disburse native GEN `amount` to the owner here;
-        # the internal ledger above is authoritative and already debited.
+        # Native GEN transfer is emitted before the ledger is cleared.
         return amount
 
     # -- reads --------------------------------------------------------------------

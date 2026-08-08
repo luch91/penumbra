@@ -144,6 +144,19 @@ class Bet:
     stake: u256
 
 
+
+@gl.evm.contract_interface
+class _NativeRecipient:
+    class View:
+        pass
+
+    class Write:
+        pass
+
+
+def send_native(recipient: Address, amount: int) -> None:
+    _NativeRecipient(recipient).emit_transfer(value=u256(amount))
+
 class RealitySettledMarket(gl.Contract):
     question: str
     resolution_urls: str          # comma-separated; identical on every validator
@@ -209,6 +222,9 @@ class RealitySettledMarket(gl.Contract):
         url_list = [u for u in self.resolution_urls.split(",") if u]
         total_sources = len(url_list)
         tol = int(self.tolerance_milli)
+        threshold = int(self.abstain_threshold_milli)
+        yes_pool = int(self.yes_pool)
+        no_pool = int(self.no_pool)
 
         def judge() -> str:
             source_parts = []
@@ -252,42 +268,50 @@ Return ONLY strict JSON, no prose, no markdown:
                 out = "UNCLEAR"
             conf = float(data["confidence"])
             conf = max(0.0, min(1.0, conf))
-            # Canonicalize: integer milli-units so strict structural fields match
-            # and the comparative principle has a stable surface to judge.
+            confidence_milli = int(round(conf * _MILLI))
+            has_winner_pool = (out == YES and yes_pool > 0) or (out == NO and no_pool > 0)
+            settlement = (
+                out
+                if out in (YES, NO) and confidence_milli >= threshold and has_winner_pool
+                else REFUND
+            )
             return canonical(
-                {"outcome": out, "confidence_milli": int(round(conf * _MILLI))}
+                {
+                    "outcome": out,
+                    "confidence_milli": confidence_milli,
+                    "settlement": settlement,
+                }
             )
 
         principle = (
             "Both results settle the same YES/NO market from the same fixed set "
             "of sources. They are EQUIVALENT if and only if: (1) the 'outcome' "
             "fields are the identical token (YES, NO, or UNCLEAR), and (2) the "
-            f"'confidence_milli' values differ by at most {tol}. If the outcomes "
-            "differ, or the confidences are far apart, they are NOT equivalent."
+            f"'confidence_milli' values differ by at most {tol}, and the "
+            "'settlement' fields must be identical. If the outcomes differ, the "
+            "confidences are far apart, or the settlement action differs, they are "
+            "NOT equivalent."
         )
         agreed = gl.eq_principle.prompt_comparative(judge, principle)
         parsed = json.loads(agreed)
         judged = str(parsed["outcome"]).strip().upper()
         conf_milli = int(parsed["confidence_milli"])
-
-        # Deterministic settlement gate -- consensus on (outcome, confidence)
-        # is already reached; no ambiguity remains here. Anything that is not a
-        # confident YES/NO becomes REFUND.
-        if judged in (YES, NO) and conf_milli >= int(self.abstain_threshold_milli):
-            final = judged
-        else:
-            final = REFUND
+        final = str(parsed["settlement"]).strip().upper()
+        require(final in (YES, NO, REFUND), "invalid settlement")
+        expected_final = (
+            judged
+            if judged in (YES, NO)
+            and conf_milli >= threshold
+            and ((judged == YES and yes_pool > 0) or (judged == NO and no_pool > 0))
+            else REFUND
+        )
+        require(final == expected_final, "settlement does not match consensus result")
 
         yes_total = int(self.yes_pool)
         no_total = int(self.no_pool)
         pool = yes_total + no_total
         win_pool = yes_total if final == YES else (no_total if final == NO else 0)
 
-        # Degenerate-market guard: a judged winner with no stake on its side has
-        # no one to pay -> fall back to REFUND so the outcome/payout invariant
-        # stays exact.
-        if final in (YES, NO) and win_pool == 0:
-            final = REFUND
 
         if final == REFUND:
             for i in range(len(self.bets)):
@@ -315,9 +339,9 @@ Return ONLY strict JSON, no prose, no markdown:
         who = gl.message.sender_address
         owed = int(self.claimable.get(who, u256(0)))
         require(owed > 0, "nothing to redeem")
+        send_native(who, owed)
         self.claimable[who] = u256(0)
-        # INTEGRATION HOOK: disburse native GEN/ERC-20 `owed` to `who` here; the
-        # internal ledger above is authoritative and already debited.
+        # Native GEN transfer is emitted before the ledger is cleared.
         return owed
 
     # -- reads ---------------------------------------------------------------

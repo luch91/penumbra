@@ -135,6 +135,7 @@ class CorroborationOracle(gl.Contract):
         # Read everything the nondet block needs into plain locals. The block may
         # not touch self/storage, so we close over these values.
         tol = int(self.tolerance_milli)
+        threshold = int(self.threshold_milli)
         total = len(url_list)
 
         def corroborate() -> str:
@@ -179,13 +180,13 @@ Return ONLY strict JSON, no prose, no markdown:
             agreeing = int(data["agreeing_count"])
             agreeing = max(0, min(total, agreeing))
             ratio_milli = (agreeing * _MILLI) // total
-            # Canonicalize: integer milli-units so strict structural fields match
-            # and the comparative principle has a stable surface to judge.
+            accepted = ratio_milli >= threshold
             return canonical(
                 {
                     "value": value,
                     "ratio_milli": ratio_milli,
                     "sources_count": total,
+                    "accepted": accepted,
                 }
             )
 
@@ -193,9 +194,10 @@ Return ONLY strict JSON, no prose, no markdown:
             "The two results corroborate the same question across the same "
             "fixed set of sources. They are EQUIVALENT if and only if: (1) the "
             "'value' fields mean the same thing (synonyms and paraphrases are "
-            f"fine), and (2) the 'ratio_milli' values differ by at most {tol}. "
-            "If the values disagree, or the ratios are far apart, they are NOT "
-            "equivalent."
+            f"fine), and (2) the 'ratio_milli' values differ by at most {tol}, "
+            "and the 'accepted' fields must be identical. If the values disagree, "
+            "the ratios are far apart, or the acceptance decision differs, they are "
+            "NOT equivalent."
         )
         agreed = gl.eq_principle.prompt_comparative(corroborate, principle)
         parsed = json.loads(agreed)
@@ -203,13 +205,10 @@ Return ONLY strict JSON, no prose, no markdown:
         value = str(parsed["value"])
         ratio_milli = int(parsed["ratio_milli"])
         sources_count = int(parsed["sources_count"])
-
-        # Deterministic gate -- no ambiguity left once consensus on
-        # (value, ratio_milli) has already been reached above.
-        require(
-            ratio_milli >= int(self.threshold_milli),
-            "insufficient corroboration across sources",
-        )
+        accepted = bool(parsed["accepted"])
+        expected_accepted = ratio_milli >= threshold
+        require(accepted == expected_accepted, "acceptance does not match ratio")
+        require(accepted, "insufficient corroboration across sources")
 
         self.facts.append(
             Fact(

@@ -93,6 +93,19 @@ class Submission:
     stake: u256
 
 
+
+@gl.evm.contract_interface
+class _NativeRecipient:
+    class View:
+        pass
+
+    class Write:
+        pass
+
+
+def send_native(recipient: Address, amount: int) -> None:
+    _NativeRecipient(recipient).emit_transfer(value=u256(amount))
+
 class SchellingResolver(gl.Contract):
     submissions: DynArray[Submission]
     winners: DynArray[u256]           # winning submission indices, set once
@@ -181,9 +194,9 @@ Return ONLY strict JSON, no prose, no markdown:
         who = gl.message.sender_address
         owed = int(self.claimable.get(who, u256(0)))
         require(owed > 0, "nothing to claim")
+        send_native(who, owed)
         self.claimable[who] = u256(0)
-        # INTEGRATION HOOK: disburse native GEN/ERC-20 `owed` to `who` here; the
-        # internal ledger above is authoritative and already debited.
+        # Native GEN transfer is emitted before the ledger is cleared.
         return owed
 
     # -- reads --------------------------------------------------------------------

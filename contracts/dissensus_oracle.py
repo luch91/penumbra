@@ -35,7 +35,7 @@ STATE DESIGN
 
 REUSE
   Wrap any high-stakes judgment ("is this transaction fraudulent?", "did the
-  contractor deliver?") and gate execution on `dissensus < threshold`.
+  contractor deliver?") and gate execution on the stored `contested` category. Consumers should use that category rather than recomputing a threshold from a tolerated score.
 """
 
 from genlayer import *
@@ -82,6 +82,7 @@ class Record:
     verdict: str
     dissensus_milli: u256  # dissensus * 1000, stored as integer to stay exact
     sample_size: u256
+    contested: bool
 
 
 # A scale factor keeps probabilities exact on-chain. Floats are fine *inside* a
@@ -93,13 +94,21 @@ class DissensusOracle(gl.Contract):
     records: DynArray[Record]
     latest: u256
     ensemble_size: u256          # how many independent opinions to simulate
-    tolerance_milli: u256        # allowed gap between validators on `agreement`
+    tolerance_milli: u256        # allowed gap between validators on agreement
+    contested_threshold_milli: u256
 
-    def __init__(self, ensemble_size: int = 7, tolerance_milli: int = 250):
+    def __init__(
+        self,
+        ensemble_size: int = 7,
+        tolerance_milli: int = 250,
+        contested_threshold_milli: int = 500,
+    ):
         require(3 <= ensemble_size <= 25, "ensemble_size out of range")
         require(0 < tolerance_milli <= 500, "tolerance out of range")
+        require(0 <= contested_threshold_milli <= 1000, "contested threshold out of range")
         self.ensemble_size = u256(ensemble_size)
         self.tolerance_milli = u256(tolerance_milli)
+        self.contested_threshold_milli = u256(contested_threshold_milli)
         self.latest = u256(0)
 
     @gl.public.write
@@ -110,6 +119,7 @@ class DissensusOracle(gl.Contract):
         # not touch self/storage, so we close over these values.
         k = int(self.ensemble_size)
         tol = int(self.tolerance_milli)
+        contested_threshold = int(self.contested_threshold_milli)
 
         def opinionate() -> str:
             prompt = f"""You are convening {k} INDEPENDENT domain experts to judge a question.
@@ -130,27 +140,36 @@ genuine spread of expert opinion: near 1.0 only when the answer is clear-cut."""
             verdict = str(data["verdict"]).strip().lower()
             agreement = float(data["agreement"])
             agreement = max(0.0, min(1.0, agreement))
+            agreement_milli = int(round(agreement * _MILLI))
+            dissensus_milli = _MILLI - agreement_milli
+            contested = dissensus_milli >= contested_threshold
             # Canonicalize: integer milli-units so strict structural fields match
             # and the comparative principle has a stable surface to judge.
             return canonical(
                 {
                     "verdict": verdict,
-                    "agreement_milli": int(round(agreement * _MILLI)),
+                    "agreement_milli": agreement_milli,
                     "sample_size": k,
+                    "contested": contested,
                 }
             )
 
         principle = (
             "The two results describe the same expert poll. They are EQUIVALENT only if: "
             "(1) the 'verdict' fields mean the same thing (synonyms and paraphrases are fine), "
-            f"and (2) the 'agreement_milli' values differ by at most {tol}. "
-            "If the verdicts disagree, or the agreement levels are far apart, they are NOT equivalent."
+            f"and (2) the agreement_milli values differ by at most {tol}, and "
+            "(3) the contested fields are identical. If the verdicts disagree, "
+            "the agreement levels are far apart, or the action category differs, "
+            "they are NOT equivalent."
         )
         agreed = gl.eq_principle.prompt_comparative(opinionate, principle)
         parsed = json.loads(agreed)
 
         verdict = str(parsed["verdict"])
         agreement_milli = int(parsed["agreement_milli"])
+        contested = bool(parsed["contested"])
+        expected_contested = (_MILLI - agreement_milli) >= contested_threshold
+        require(contested == expected_contested, "contested category does not match score")
         dissensus_milli = _MILLI - agreement_milli
 
         rec = Record(
@@ -158,6 +177,7 @@ genuine spread of expert opinion: near 1.0 only when the answer is clear-cut."""
             verdict=verdict,
             dissensus_milli=u256(dissensus_milli),
             sample_size=u256(int(parsed["sample_size"])),
+            contested=contested,
         )
         self.records.append(rec)
         self.latest = u256(len(self.records) - 1)
@@ -178,6 +198,7 @@ genuine spread of expert opinion: near 1.0 only when the answer is clear-cut."""
                 "verdict": r.verdict,
                 "dissensus_milli": int(r.dissensus_milli),
                 "sample_size": int(r.sample_size),
+                "contested": r.contested,
             }
         )
 
@@ -187,7 +208,7 @@ genuine spread of expert opinion: near 1.0 only when the answer is clear-cut."""
         return self.get(int(self.latest))
 
     @gl.public.view
-    def is_contested(self, record_id: int, threshold_milli: int) -> bool:
-        """Convenience gate for downstream contracts: True if too close to call."""
+    def is_contested(self, record_id: int) -> bool:
+        """Return the category agreed during resolution."""
         require(0 <= record_id < len(self.records), "no such record")
-        return int(self.records[record_id].dissensus_milli) >= threshold_milli
+        return self.records[record_id].contested
