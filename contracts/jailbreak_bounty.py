@@ -30,8 +30,9 @@ STATE & MONEY DESIGN
   `bounty`. Payouts use the PULL pattern: a win credits the challenger's
   `claimable` balance, and they withdraw separately. Pull-over-push is the
   standard safe-custody pattern and keeps adjudication and disbursement on
-  separate transactions. The single line where an integration would wire real
-  native/ERC-20 transfer out is marked; the internal ledger is authoritative.
+  separate transactions. A native transfer is emitted when the claimant
+  withdraws, after the internal ledger is cleared. The ledger remains the
+  authoritative record of what can be withdrawn.
 
 REUSE
   Any "prove my policy is unbreakable, I dare you" market: content filters,
