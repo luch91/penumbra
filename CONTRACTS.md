@@ -1,6 +1,6 @@
 # Penumbra · Contract Catalog
 
-One page per primitive. Each entry states the **purpose**, the **consensus move** it is built on (and why that move), the **state design**, the **key methods**, and the **reuse** shape. Built contracts link to source; specified contracts are fully designed and queued.
+One page per primitive. Each entry states the **purpose**, the **consensus move** it is built on (and why that move), the **state design**, the **key methods**, and the **reuse** shape. All 20 catalogue contracts have source, tests, deployment records, and focused live verification below.
 
 Consensus moves referenced below:
 `strict_eq` (byte-exact) · `comparative` (equivalent meaning, validators redo + compare) · `non_comparative` (leader does it, validators verify integrity) · `run_nondet` (custom adjudication).
@@ -9,7 +9,7 @@ Consensus moves referenced below:
 
 ## Deployed addresses (studionet)
 
-The table records current deployments for affected contracts and historical deployments for unaffected contracts. Verify Studio state before relying on any address as evidence.
+The table records the current deployment used for each catalogue contract. Verify the linked Studio Explorer address before relying on live state, because hosted Studio state can be reset or redeployed.
 
 Current redeployments for the affected primitives were completed on 2026-08-08. Network: `studionet` (`https://studio.genlayer.com/api`), runner `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6`. The table retains prior entries for unaffected contracts. Studio state can reset between sessions, so verify addresses before relying on them.
 

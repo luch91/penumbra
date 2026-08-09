@@ -32,7 +32,7 @@ Smoke-test the five built contracts first: `dissensus_oracle.py` (deploy `7, 250
 
 `genlayer deploy --contract contracts/<file>.py --args ...` / `genlayer call <address> <method> --args ...` (read) / `genlayer write <address> <method> --args ...` (write) work directly against studionet once `genlayer init` has been run once and an account is unlocked (`genlayer account unlock`). This is how every bug listed under "Known blockers & open verification gaps" in `CLAUDE.md` was actually found -- by deploying and calling, not by reading the docs.
 
-**Known CLI gap:** `genlayer write` (v0.39.2) hardcodes `value: 0n` on every call -- there is no way to send payable value through it. `--fee-value` is gas/fee deposit, not `gl.message.value`. To smoke-test a `.payable` method (`JailbreakBounty.fund()`), use the browser Studio instead -- it has a dedicated value field on write calls.
+**Known CLI gap:** `genlayer write` hardcodes `value: 0n` on every call -- there is no way to send payable value through it. `--fee-value` is a gas or fee deposit, not `gl.message.value`. To smoke-test a `.payable` method, use the browser Studio or the JavaScript SDK. The SDK path is the current reproducible route for Studionet because it supports an explicit transaction `value` field.
 
 **Account note:** a fresh account (not the CLI's default `default`/`funded` keystores) may be needed -- those can end up locked with a lost password and 0 GEN, in which case `genlayer account create --name <name>` and `genlayer account use <name>` is faster than trying to recover them.
 
