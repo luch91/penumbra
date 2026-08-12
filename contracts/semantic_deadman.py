@@ -19,10 +19,11 @@ HOW CONSENSUS IS USED
   model to decide, given the last confirmed-alive activity snapshot and the
   policy the owner stated at deploy time, whether the source shows genuine
   activity that has visibly advanced since then. Consensus uses the
-  COMPARATIVE principle keyed on a single `alive` boolean: every validator
-  independently re-fetches the source and re-judges, so a release requires
-  INDEPENDENT agreement that the trail has gone cold -- not one validator's
-  stale cache or one model's hallucinated read of the page.
+  COMPARATIVE principle on an action-bound `outcome` category and the next
+  baseline. Every validator independently re-fetches the source and
+  re-judges. A release requires agreement on `INACTIVE`, while `ACTIVE`
+  requires agreement on the factual meaning of the new baseline. A fetch
+  failure is a separate `FETCH_FAILED` outcome and cannot release funds.
 
   ASSUMPTION (forced by a live-confirmed runner gap, documented in DECISIONS.md
   2026-07-01): CONTRACTS.md's one-liner spec names a `last_alive_ts` field, and
@@ -37,7 +38,9 @@ HOW CONSENSUS IS USED
   stores a short LLM-produced description of the activity it observed (a
   snapshot), and each `poke()` asks the model whether the freshly fetched
   source shows genuine activity that has visibly ADVANCED since that snapshot
-  -- not whether a clock has ticked. This is arguably a better fit for "semantic
+  -- not whether a clock has ticked. The snapshot is returned as the
+  consensus-bound `baseline` and cannot be replaced by an unverified validator
+  output. This is arguably a better fit for "semantic
   inactivity, not a missed timestamp ping" than a timestamp comparison would
   have been anyway.
 
@@ -48,7 +51,8 @@ STATE & MONEY DESIGN
   deterministic path -- the owner can always reset the switch directly, no LLM
   call needed. `poke()` is the expensive semantic path -- anyone can call it
   (so the beneficiary isn't dependent on the owner's cooperation), and it only
-  moves state when consensus agrees the source itself proves continued life.
+  moves state when consensus agrees on the `INACTIVE` category. `FETCH_FAILED`
+  leaves the treasury, release flag, claimable balance, and baseline unchanged.
   Release uses the PULL pattern: `claim()` withdraws separately from `poke()`.
 
 REUSE
@@ -192,12 +196,17 @@ class SemanticDeadman(gl.Contract):
             # live via gl.nondet.NondetException (e.g. {'causes':
             # ['TLD_FORBIDDEN'], ...}). An uncaught raise here would abort the
             # whole poke() transaction instead of being read as evidence the
-            # source has gone dark, so it is treated as NOT alive explicitly.
+            # source has gone dark, so it becomes a separate FETCH_FAILED
+            # outcome and cannot release funds.
             try:
                 content = gl.nondet.web.render(url, mode="text")
             except Exception as e:
                 return canonical(
-                    {"alive": False, "snapshot": "", "reason": f"fetch failed: {e}"[:280]}
+                    {
+                        "outcome": "FETCH_FAILED",
+                        "baseline": last_snapshot,
+                        "reason": f"fetch failed: {e}"[:280],
+                    }
                 )
             baseline_note = (
                 f'PREVIOUSLY OBSERVED ACTIVITY (the last confirmed-alive baseline): "{last_snapshot}"'
@@ -226,31 +235,56 @@ that has visibly ADVANCED beyond the previously observed baseline (a new post,
 a new commit, a changed status -- not just the same static page repeating what
 was already known). If there is no baseline yet, judge whether the content
 shows ANY genuine current activity consistent with the policy. Be conservative:
-an unchanged page, a parked domain, or a fetch error all count as NOT alive.
+an unchanged page counts as INACTIVE. A fetch error is not an inactivity
+finding because it cannot establish the source state.
 
 Return ONLY strict JSON, no prose, no markdown:
-{{ "alive": <true|false>, "snapshot": "<short factual description of the most recent activity observed, to serve as the next baseline; empty string if not alive>", "reason": "<one sentence>" }}"""
+{{ "outcome": "ACTIVE"|"INACTIVE", "baseline": "<short factual description of the most recent activity observed; repeat the previous baseline for INACTIVE>", "reason": "<one sentence>" }}"""
             raw = gl.nondet.exec_prompt(prompt)
             verdict = parse_json_response(raw)
-            alive = bool(verdict["alive"])
-            snapshot = str(verdict.get("snapshot", ""))[:400]
+            outcome = str(verdict["outcome"]).upper()
+            require(outcome in ("ACTIVE", "INACTIVE"), "invalid liveness outcome")
+            baseline = str(verdict.get("baseline", ""))[:400]
+            if outcome == "ACTIVE":
+                require(len(baseline.strip()) > 0, "active result needs baseline")
             reason = str(verdict.get("reason", ""))[:280]
-            return canonical({"alive": alive, "snapshot": snapshot, "reason": reason})
+            return canonical(
+                {"outcome": outcome, "baseline": baseline, "reason": reason}
+            )
 
         principle = (
             "Both results judge whether a liveness source shows genuine ongoing "
-            "activity for a dead-man's-switch check. They are EQUIVALENT if and "
-            "only if their 'alive' boolean is the same. The 'snapshot' and "
-            "'reason' text may differ freely and must be ignored when comparing."
+            "activity for a dead-man's-switch check. The outcome is action-bound: "
+            "ACTIVE, INACTIVE, and FETCH_FAILED are distinct and cannot be treated "
+            "as equivalent. ACTIVE results are equivalent only when their baseline "
+            "descriptions communicate the same factual latest activity. INACTIVE "
+            "and FETCH_FAILED results must preserve the supplied previous baseline. "
+            "The baseline is consensus-bound state, not ignorable metadata. Reason "
+            "text may differ freely and must be ignored."
         )
         agreed = gl.eq_principle.prompt_comparative(judge_liveness, principle)
         result = json.loads(agreed)
-        alive = bool(result["alive"])
+        outcome = str(result["outcome"]).upper()
+        require(
+            outcome in ("ACTIVE", "INACTIVE", "FETCH_FAILED"),
+            "invalid agreed liveness outcome",
+        )
+        agreed_baseline = str(result.get("baseline", ""))[:400]
 
-        if alive:
+        if outcome == "ACTIVE":
             # Consensus confirms the trail is warm. Store the new baseline.
-            self.last_alive_snapshot = str(result.get("snapshot", ""))[:400]
+            require(len(agreed_baseline.strip()) > 0, "active result needs baseline")
+            self.last_alive_snapshot = agreed_baseline
             return False
+
+        if outcome == "FETCH_FAILED":
+            # No source state was established. Preserve every escrow-related
+            # field and the prior baseline so an outage cannot release funds.
+            require(agreed_baseline == last_snapshot, "failure changed baseline")
+            return False
+
+        # An inactive finding does not establish a replacement baseline.
+        require(agreed_baseline == last_snapshot, "inactive changed baseline")
 
         # Consensus agrees the source has gone cold. Release, once, forever.
         self.released = True

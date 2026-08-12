@@ -26,7 +26,7 @@ Studionet, Asimov, and Bradbury all **reject floating tags** (`py-genlayer:test`
 2. Contracts → paste a file from `contracts/` → Deploy (constructor params are auto-detected).
 3. Call the read/write methods and watch the consensus logs.
 
-Smoke-test the five built contracts first: `dissensus_oracle.py` (deploy `7, 250`; `resolve("Is water wet?")`), `jailbreak_bounty.py` (deploy with a rule; `fund()` with value; `attempt("hello")`), `proof_carrying_answer.py` (`attest` a sound proof, then a bogus one), `schelling_resolver.py` (deploy `2`; `submit("blue")` with value from two different accounts, then `resolve()`), `semantic_deadman.py` (deploy `beneficiary, liveness_url, liveness_policy`; `poke()` -- unlike the other payable-gated contracts, this one's full LLM path needs no value and works from the CLI too).
+Smoke-test the five built contracts first: `dissensus_oracle.py` (deploy `7, 250`; `resolve("Is water wet?")`), `jailbreak_bounty.py` (deploy with a rule; `fund()` with value; `attempt("hello")`), `proof_carrying_answer.py` (`attest` a sound proof, then a bogus one), `schelling_resolver.py` (deploy `2`; `submit("blue")` with value from two different accounts, then `resolve()`), `semantic_deadman.py` (deploy `beneficiary, liveness_url, liveness_policy`; `poke()` -- unlike the other payable-gated contracts, this one's full LLM path needs no value and works from the CLI too). A failed liveness fetch must now be verified as `FETCH_FAILED`: it must leave the treasury, release flag, claimable balance, and baseline unchanged.
 
 ## CLI smoke-testing
 

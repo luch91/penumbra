@@ -207,8 +207,8 @@ Current redeployments for the affected primitives were completed on 2026-08-08. 
 
 ### 18. SemanticDeadman ✅ `contracts/semantic_deadman.py`
 - **Purpose.** A dead-man's switch keyed to *genuine* activity, not a mechanical heartbeat.
-- **Consensus.** `comparative`: validators fetch the liveness source (e.g. a public profile/feed) and agree on whether meaningful recent activity exists.
-- **State.** `owner`, `beneficiary`, `last_alive_snapshot` (LLM-produced activity description; no timestamp -- this runner has no clock/`gl.message.datetime`, see CLAUDE.md), `liveness_url`, `liveness_policy`, `treasury`, `released: bool`.
+- **Consensus.** `comparative` binds the action category (`ACTIVE`, `INACTIVE`, or `FETCH_FAILED`) and the next baseline. Only `INACTIVE` releases. `FETCH_FAILED` is a separate safe outcome and leaves all escrow state unchanged.
+- **State.** `owner`, `beneficiary`, `last_alive_snapshot` (the consensus-bound baseline; no timestamp -- this runner has no clock/`gl.message.datetime`, see CLAUDE.md), `liveness_url`, `liveness_policy`, `treasury`, `released: bool`.
 - **API.** `check_in()` (owner) · `poke() -> released: bool` · `claim()` (beneficiary) · `fund()` (payable).
 - **Reuse.** Inheritance, key-rotation fallback, abandoned-treasury recovery.
 

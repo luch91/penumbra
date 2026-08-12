@@ -8,8 +8,9 @@ Unlike JailbreakBounty/SchellingResolver, poke() and check_in() are plain
 the CLI payable-value limitation. Guarantees asserted are structural: only the
 owner can check_in(), the switch releases exactly once and stays released,
 claim() follows the pull-payment ledger, and a genuinely unreachable liveness
-source is judged not-alive (a deterministic, clear-cut case -- a real fetch
-failure, not a borderline LLM opinion). We never assert the exact wording of
+source is treated as a fetch failure that cannot release funds (a
+deterministic, clear-cut case -- a real fetch failure, not a borderline LLM
+opinion). We never assert the exact wording of
 an "alive" judgment against a live, ambiguous source, since that is genuinely
 non-deterministic model opinion.
 """
@@ -53,7 +54,7 @@ def test_claim_without_balance_reverts():
     assert not tx_execution_succeeded(receipt)
 
 
-def test_dead_source_releases_and_pays_out():
+def test_fetch_failure_preserves_escrow():
     beneficiary = create_account()
     c = _deploy(beneficiary=beneficiary.address)
     assert tx_execution_succeeded(c.fund().transact(value=1000))
@@ -61,25 +62,24 @@ def test_dead_source_releases_and_pays_out():
     assert tx_execution_succeeded(receipt)
 
     status = json.loads(c.status().call())
-    assert status["released"] is True
+    assert status["released"] is False
+    assert status["treasury"] == 1000
+    assert status["last_alive_snapshot"] == ""
 
     owed = c.claimable_of(args=[beneficiary.address]).call()
-    assert owed == 1000
-    assert tx_execution_succeeded(
-        c.connect(account=beneficiary).claim().transact()
-    )
-    assert c.claimable_of(args=[beneficiary.address]).call() == 0
+    assert owed == 0
 
 
-def test_poke_after_release_reverts():
+def test_repeated_fetch_failure_does_not_release():
     c = _deploy()
     assert tx_execution_succeeded(c.poke().transact())
-    receipt = c.poke().transact()
-    assert not tx_execution_succeeded(receipt)
+    assert tx_execution_succeeded(c.poke().transact())
+    status = json.loads(c.status().call())
+    assert status["released"] is False
+    assert status["treasury"] == 0
 
 
-def test_check_in_after_release_reverts():
+def test_check_in_after_fetch_failure_still_allowed():
     c = _deploy()
     assert tx_execution_succeeded(c.poke().transact())
-    receipt = c.check_in().transact()
-    assert not tx_execution_succeeded(receipt)
+    assert tx_execution_succeeded(c.check_in().transact())
