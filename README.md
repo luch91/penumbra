@@ -70,6 +70,7 @@ The catalog below covers all 20 contracts. Each contract has its own source file
 - [All integration tests](https://github.com/luch91/penumbra/tree/main/tests)
 - [All standalone contract source files](https://github.com/luch91/penumbra/tree/main/contracts)
 - [Consensus helper reference](https://github.com/luch91/penumbra/blob/main/lib/penumbra_consensus.py)
+- [Finalized SemanticDeadman deployment](https://explorer-studio.genlayer.com/tx/0x8669e0db1a0295e216733027446ec949082636553ba958ee68a8f09a8cf4f1a2)
 ## The catalog -- 20 primitives in 8 families
 
 Status legend: ✅ source and integration tests present; all 20 catalogue contracts have deployment records and focused live SDK evidence in `CONTRACTS.md`. The full 143-test Studionet suite is not claimed as passed because hosted RPC runs timed out.
