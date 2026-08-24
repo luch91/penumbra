@@ -71,6 +71,20 @@ The catalog below covers all 20 contracts. Each contract has its own source file
 - [All standalone contract source files](https://github.com/luch91/penumbra/tree/main/contracts)
 - [Consensus helper reference](https://github.com/luch91/penumbra/blob/main/lib/penumbra_consensus.py)
 - [Finalized SemanticDeadman deployment](https://explorer-studio.genlayer.com/tx/0x8669e0db1a0295e216733027446ec949082636553ba958ee68a8f09a8cf4f1a2)
+
+### PenumbraGate deployment
+
+PenumbraGate is the catalog contribution review primitive. Its finalized
+Studionet deployment uses the pinned runner, the full NN-1 through NN-8 rubric,
+comparative consensus for both rubric parts, one free submission per address,
+mandatory stake thereafter, and pull-payment refunds.
+
+- [PenumbraGate source](https://github.com/luch91/penumbra/blob/main/contracts/penumbra_gate.py)
+- [PenumbraGate contract](https://explorer-studio.genlayer.com/address/0xF45009635A785fE8469935A07F653AF6E9c26c2A)
+- [PenumbraGate deployment transaction](https://explorer-studio.genlayer.com/tx/0x50bcc7d3f121005bdf5c6098727cd1fe2f2e33753474d98ab1fc4eb286d5659e)
+- Deployment wallet: `0x7048781a2Fc941617995f8c4542A1908500C0703`
+- [PenumbraGate tests](https://github.com/luch91/penumbra/blob/main/tests/test_penumbra_gate.py)
+- [PenumbraGate agent](https://github.com/luch91/penumbra/blob/main/agent/review_agent.py)
 ## The catalog -- 20 primitives in 8 families
 
 Status legend: ✅ source and integration tests present; all 20 catalogue contracts have deployment records and focused live SDK evidence in `CONTRACTS.md`. The full 143-test Studionet suite is not claimed as passed because hosted RPC runs timed out.
