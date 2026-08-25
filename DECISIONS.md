@@ -7,6 +7,65 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-08-25 -- Phase 2 open-question review and network limitation
+
+**Decision.** The four Phase 2 questions now have explicit statuses. The
+current documentation supports the safe operating model, but one empirical
+state question remains blocked by a temporary Studio DNS failure and must not
+be presented as tested.
+
+1. **Appeal gas configuration: partially resolved.** Current GenLayer
+   documentation and the installed CLI expose transaction-level fee profiles,
+   explicit fee deposits, appeal-round overrides, `appeal-bond`, appeal, and
+   fee top-up operations. They do not expose a contract-level Python setter
+   with a documented signature for the minimum appealability requirement.
+   PenumbraGate therefore does not claim to configure that value on chain.
+   The operational safeguard is to submit with an appeal-capable fee profile
+   and allow fee top-up during the finality window.
+
+2. **State across appeal rounds: unresolved empirical question.** Current
+   documentation says the transaction is re-executed and that the final
+   round's state becomes authoritative. It does not state whether writes from
+   discarded rounds are replaced or accumulated. A disposable counter probe
+   was prepared, but deployment failed twice because
+   `studio.genlayer.com` returned `EAI_AGAIN` during DNS resolution. No result
+   is inferred from that failure. PenumbraGate must not be treated as fully
+   release-ready until this probe passes on a live network.
+
+3. **Appeal visibility inside contract code: resolved for design purposes.**
+   The documented raw message exposes consensus-stage data, including the
+   leader result supplied to validators, but no documented appeal round number
+   or validator-set size available to ordinary contract logic. Appeal
+   detection therefore remains off chain through the final receipt. The agent
+   must wait for finality before recording an appeal flag.
+
+4. **Rubric criteria size: unresolved implementation limit.** Current
+   documentation specifies the `criteria: str` parameter but publishes no
+   practical maximum length. The agent preserves the rubric exactly and splits
+   it at the Tier B boundary. A live schema and transaction test with the full
+   external rubric is still required before claiming that the two-call design
+   is sufficient. Silent truncation is prohibited.
+
+**Verification sources.**
+
+- https://docs.genlayer.com/understand-genlayer-protocol/core-concepts/optimistic-democracy/appeal-process
+- https://docs.genlayer.com/understand-genlayer-protocol/core-concepts/optimistic-democracy/finality
+- https://docs.genlayer.com/api-references/genlayer-js/contracts
+- https://docs.genlayer.com/developers/intelligent-contracts/features/transaction-context
+- https://sdk.genlayer.com/main/spec/04-contract-interface/05-execution-flow.html
+
+The repository currently collects 153 tests. A full hosted `gltest` run was
+started during this phase but produced no progress for more than two minutes
+while the Studio hostname was failing DNS resolution, so it was stopped. This
+does not count as a passing full-suite result.
+
+**How to apply.** Do not mark Phase 2 fully complete while questions 2 and 4
+remain empirically unverified. Do not add contract logic that attempts to
+detect appeal rounds from undocumented message fields. Use finality receipt
+data and fee top-ups as the current safe operational boundary.
+
+---
+
 ## 2026-08-25 -- Phase 1 PenumbraGate compliance completed
 
 **Decision.** Phase 1 changed PenumbraGate from comparative review of
