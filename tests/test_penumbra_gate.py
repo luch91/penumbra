@@ -61,3 +61,11 @@ def test_public_source_has_no_custom_appeal_method():
     assert "def resubmit_for_review(" not in source
     assert "prompt_non_comparative" in source
     assert "prompt_comparative" not in source
+
+
+def test_submit_has_appeal_reexecution_idempotency_guard():
+    source = open("contracts/penumbra_gate.py", encoding="ascii").read()
+    assert 'gl.message_raw["datetime"]' in source
+    assert "hashlib.sha256" in source
+    assert "last_submission_key" in source
+    assert "last_submission_id" in source

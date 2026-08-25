@@ -7,12 +7,12 @@ Updated every session; newest entries at the top.
 
 ---
 
-## 2026-08-25 -- Phase 2 open-question review and network limitation
+## 2026-08-25 -- Phase 2 empirical probes and appeal idempotency
 
-**Decision.** The four Phase 2 questions now have explicit statuses. The
-current documentation supports the safe operating model, but one empirical
-state question remains blocked by a temporary Studio DNS failure and must not
-be presented as tested.
+**Decision.** The disposable probes were rerun after Studio DNS recovered.
+The state question is now resolved empirically, and PenumbraGate includes a
+transaction fingerprint guard before any append, count increment, or refund
+credit.
 
 1. **Appeal gas configuration: partially resolved.** Current GenLayer
    documentation and the installed CLI expose transaction-level fee profiles,
@@ -23,14 +23,16 @@ be presented as tested.
    The operational safeguard is to submit with an appeal-capable fee profile
    and allow fee top-up during the finality window.
 
-2. **State across appeal rounds: unresolved empirical question.** Current
-   documentation says the transaction is re-executed and that the final
-   round's state becomes authoritative. It does not state whether writes from
-   discarded rounds are replaced or accumulated. A disposable counter probe
-   was prepared, but deployment failed twice because
-   `studio.genlayer.com` returned `EAI_AGAIN` during DNS resolution. No result
-   is inferred from that failure. PenumbraGate must not be treated as fully
-   release-ready until this probe passes on a live network.
+2. **State across appeal rounds: resolved as accumulation on Studionet.** The
+   disposable counter probe deployed at
+   `0xCb5e1C5498324c1983021aaC3edF0A9dFE610aD7`. Its `bump` transaction
+   `0x2fae37de2389ea0b53e524879503958739d2042b32d4e0bca859cc10fe0eeece`
+   returned `1` in the first round. After appealing the same transaction, the
+   finalized result was `2`, and `get_count()` also returned `2`. Appeal
+   re-execution therefore accumulates writes on this network. PenumbraGate
+   now fingerprints the sender, submission data, value, and stable raw
+   message timestamp. A matching re-execution returns the stored verdict and
+   performs no append, count increment, or refund credit.
 
 3. **Appeal visibility inside contract code: resolved for design purposes.**
    The documented raw message exposes consensus-stage data, including the
@@ -39,12 +41,17 @@ be presented as tested.
    detection therefore remains off chain through the final receipt. The agent
    must wait for finality before recording an appeal flag.
 
-4. **Rubric criteria size: unresolved implementation limit.** Current
-   documentation specifies the `criteria: str` parameter but publishes no
-   practical maximum length. The agent preserves the rubric exactly and splits
-   it at the Tier B boundary. A live schema and transaction test with the full
-   external rubric is still required before claiming that the two-call design
-   is sufficient. Silent truncation is prohibited.
+4. **Rubric criteria size: partially verified, maximum still unpublished.**
+   Current documentation specifies the `criteria: str` parameter but publishes
+   no practical maximum length. A disposable probe deployed with two
+   criteria strings of the exact external-rubric part lengths, 5,773 and 4,834
+   characters, at
+   `0xA8aeb7e202733a2a7d5bB977B438AD3315eE8a26`.
+   Deployment finalized in transaction
+   `0xa5d52aa76a15e2a4a04f1ce563697fe10abb88e0f977e0b9fdbec292cf3ac1aa`.
+   The probe stores both values successfully. A write-level prompt execution
+   remains network-dependent and the CLI read path cannot invoke a write
+   method. No maximum is claimed, and the split design remains mandatory.
 
 **Verification sources.**
 
@@ -54,15 +61,17 @@ be presented as tested.
 - https://docs.genlayer.com/developers/intelligent-contracts/features/transaction-context
 - https://sdk.genlayer.com/main/spec/04-contract-interface/05-execution-flow.html
 
-The repository currently collects 153 tests. A full hosted `gltest` run was
-started during this phase but produced no progress for more than two minutes
-while the Studio hostname was failing DNS resolution, so it was stopped. This
-does not count as a passing full-suite result.
+The repository currently collects 154 tests. An earlier full hosted `gltest`
+run was stopped after more than two minutes while the Studio hostname was
+failing DNS resolution. That historical run does not count as a passing
+full-suite result. A new full run is required after the idempotency change.
 
-**How to apply.** Do not mark Phase 2 fully complete while questions 2 and 4
-remain empirically unverified. Do not add contract logic that attempts to
-detect appeal rounds from undocumented message fields. Use finality receipt
-data and fee top-ups as the current safe operational boundary.
+**How to apply.** Treat appeal re-execution as state accumulation unless a
+future network-specific test proves otherwise. Do not add contract logic that
+attempts to detect appeal rounds from undocumented message fields. Use
+finality receipt data and fee top-ups as the current safe operational
+boundary. The practical criteria maximum remains an explicit limitation until
+the network publishes or demonstrates a boundary.
 
 ---
 

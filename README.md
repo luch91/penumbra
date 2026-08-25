@@ -113,7 +113,7 @@ The implementation is in [`agent/review_agent.py`](https://github.com/luch91/pen
 
 ## The catalog -- 20 primitives in 8 families
 
-Status legend: ✅ source and integration tests present; all 20 catalogue contracts have deployment records and focused live SDK evidence in `CONTRACTS.md`. The full 143-test Studionet suite is not claimed as passed because hosted RPC runs timed out.
+Status legend: ✅ source and integration tests present; all 20 catalogue contracts have deployment records and focused live SDK evidence in `CONTRACTS.md`. The full 154-test Studionet suite is not claimed as passed because the hosted RPC test process stalled during live contract setup.
 
 ### I · Oracles of Doubt -- *disagreement as signal*
 1. ✅ **DissensusOracle** -- answers a contested question *and* publishes a `dissensus` score by self-ensembling K expert opinions; the comparative principle forces validators to agree on both the verdict and how hard the question was. Downstream contracts gate on it. → `contracts/dissensus_oracle.py`

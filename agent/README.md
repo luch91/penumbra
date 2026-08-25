@@ -24,17 +24,18 @@ The agent never holds stake, makes the verdict, or merges a pull request.
    This is resolved by design: PenumbraGate does not release a verdict or
    merge anything before FINALIZED, and the contract has no appeal-dependent
    payout. A caller may add appeal funding during the finality window.
-2. State replacement across appeal rounds: GenLayer documents that the final
-   round is binding and that the final transaction state is updated. PenumbraGate
-   emits no accepted-stage messages, so the documented duplicate-message risk
-   does not apply. Submission accounting is written only by the transaction's
-   final committed execution.
+2. State replacement across appeal rounds: a live Studionet counter probe
+   showed accumulation, not replacement. PenumbraGate therefore fingerprints
+   the sender, submission data, value, and stable raw message timestamp. A
+   matching appeal re-execution returns the recorded verdict without appending
+   a second record or crediting the refund twice.
 3. In-contract appeal metadata: the current transaction context documents no
    appeal round or validator-set accessor. This is resolved by design. The
    agent reads the finalized receipt and alone writes the audit flag.
-4. Criteria length: no public ceiling was found. The agent preserves the full
-   rubric and splits it at the Tier B boundary. The contract independently
-   re-runs both parts with comparative consensus, so it never silently
-   truncates or treats a classification as leader-only validation.
+4. Criteria length: no public ceiling was found. A live deployment stored two
+   synthetic criteria values with the exact external-rubric part lengths,
+   5,773 and 4,834 characters. The agent preserves the full rubric and splits
+   it at the Tier B boundary. The contract runs both parts with
+   non-comparative consensus and never silently truncates the source text.
 
 The GenLayerPY receipt and finality calls follow the official SDK reference.

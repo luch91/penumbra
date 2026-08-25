@@ -19,7 +19,9 @@ STATE DESIGN
   Submissions are append-only public records. Each sender has one lifetime
   free submission. Later submissions require min_stake. Every submitted value
   becomes a pull-payment refund, regardless of the verdict. Funds leave only
-  through withdraw and a real native value transfer.
+  through withdraw and a real native value transfer. A transaction fingerprint
+  prevents an appeal re-execution from appending the same submission or
+  crediting its refund twice.
 
 REUSE
   The same primitive can gate contribution registries, curated contract
@@ -28,6 +30,7 @@ REUSE
 """
 
 from genlayer import *
+import hashlib
 import json
 from dataclasses import dataclass
 
@@ -86,6 +89,8 @@ class PenumbraGate(gl.Contract):
     submissions: DynArray[Submission]
     submission_count: TreeMap[Address, u256]
     claimable: TreeMap[Address, u256]
+    last_submission_key: TreeMap[Address, str]
+    last_submission_id: TreeMap[Address, u256]
 
     def __init__(
         self,
@@ -112,6 +117,25 @@ class PenumbraGate(gl.Contract):
         value = int(gl.message.value)
         if count > 0:
             require(value >= int(self.min_stake), "stake required")
+
+        transaction_key = hashlib.sha256(
+            json.dumps(
+                {
+                    "sender": sender.as_hex,
+                    "source": source,
+                    "summary": summary,
+                    "value": value,
+                    "datetime": str(gl.message_raw["datetime"]),
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        previous_key = self.last_submission_key.get(sender, "")
+        if previous_key == transaction_key:
+            previous_id = int(self.last_submission_id.get(sender, u256(0)))
+            previous_record = self.submissions[previous_id]
+            return previous_record.verdict == "ACCEPT"
 
         data = json.dumps(
             {
@@ -154,6 +178,7 @@ class PenumbraGate(gl.Contract):
             sort_keys=True,
             separators=(",", ":"),
         )
+        submission_id = len(self.submissions)
         submission = Submission(
             source=source,
             summary=summary,
@@ -167,6 +192,8 @@ class PenumbraGate(gl.Contract):
         self.submission_count[sender] = u256(count + 1)
         prior_claimable = int(self.claimable.get(sender, u256(0)))
         self.claimable[sender] = u256(prior_claimable + value)
+        self.last_submission_key[sender] = transaction_key
+        self.last_submission_id[sender] = u256(submission_id)
         return accepted
 
     @gl.public.write
