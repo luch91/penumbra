@@ -23,6 +23,12 @@ verbatim rubric at build time, explicit submission-data delimiting, native
 pull-payment transfers, the locked stake policy, and no custom appeal or
 reroll method. Keep the handoff documents outside the repository.
 
+The agent work in this phase is to implement and test the deterministic
+front door: ASCII and syntax checks, runner-hash validation, forbidden-pattern
+checks, structural completeness checks, NN-2 transfer checks, and NN-8 URL
+scope checks. The agent must pass submission text as delimited data, never as
+instructions.
+
 **Exit criteria:** source review finds no known handoff mismatch; all relevant
 tests cover free submission, mandatory later stake, full refund on both
 verdicts, empty strings, agent authorization, and absence of an appeal-shaped
@@ -36,6 +42,13 @@ visibility into appeal rounds, and the practical rubric-size limit. Run the
 complete test suite through the direct GenLayer CLI where possible, then
 separate source failures from hosted-network or validator failures. Repeat
 the ASCII scan, `py_compile`, static pre-filter checks, and focused tests.
+
+The agent work in this phase is to implement and test the operational loop:
+construct the submit call after the pre-filter passes, wait for
+`FINALIZED`, inspect the final receipt for appeal evidence, call
+`mark_appealed` when required, and produce a clear accept or reject report.
+The agent must never merge a contribution, hold stake, or act on
+`ACCEPTED` alone.
 
 **Exit criteria:** each open question has a documented answer or a visible,
 evidence-backed unresolved status; no source defect is hidden behind an
@@ -51,6 +64,12 @@ through `withdraw`. Update `README.md` with the final contract address,
 GenShipyard link, transaction hashes, test commands, and limitations. Commit
 the release changes and push `main` only after the evidence matches the final
 source.
+
+The agent work in this phase is to run the release workflow against the final
+deployment: perform the mechanical pre-filter, submit the reviewed source,
+poll through finality, record whether an appeal occurred, and publish the
+verdict and reason without auto-merging. Its logs and README evidence must
+identify the exact contract address and transaction hashes used.
 
 **Exit criteria:** the deployed source is identical to the reviewed source,
 the live lifecycle is finalized and reproducible, the README is accurate, and
