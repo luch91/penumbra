@@ -81,11 +81,11 @@ mandatory stake thereafter, and pull-payment refunds.
 
 - [PenumbraGate source](https://github.com/luch91/penumbra/blob/main/contracts/penumbra_gate.py)
 - [PenumbraGate contract](https://explorer-studio.genlayer.com/address/0xF45009635A785fE8469935A07F653AF6E9c26c2A)
-- [PenumbraGate deployment transaction](https://explorer-studio.genlayer.com/tx/0x50bcc7d3f121005bdf5c6098727cd1fe2f2e33753474d98ab1fc4eb286d5659e)
+- PenumbraGate deployment through [GenShipyard](https://genshipyard.com/): `0x50bcc7d3f121005bdf5c6098727cd1fe2f2e33753474d98ab1fc4eb286d5659e`
 - Deployment wallet: `0x7048781a2Fc941617995f8c4542A1908500C0703`
-- [Free submission smoke test](https://explorer-studio.genlayer.com/tx/0x90225875942d4794aaf50cd6574b7e6f60bb863166797a315e9d8aa3bff9c9cd)
-- [Staked submission smoke test](https://explorer-studio.genlayer.com/tx/0xca15a0d9932b053d6508bbee77cb62907ada8d0fbd0d0f739d714ca684b8ed74)
-- [Full refund withdrawal](https://explorer-studio.genlayer.com/tx/0x3fe4b876e205c5e90382fd0bd9f30e6c907a66d65c5846779dba5c0d596ae005)
+- Free submission through [GenShipyard](https://genshipyard.com/): `0x90225875942d4794aaf50cd6574b7e6f60bb863166797a315e9d8aa3bff9c9cd`
+- Staked submission through [GenShipyard](https://genshipyard.com/): `0xca15a0d9932b053d6508bbee77cb62907ada8d0fbd0d0f739d714ca684b8ed74`
+- Full refund withdrawal through [GenShipyard](https://genshipyard.com/): `0x3fe4b876e205c5e90382fd0bd9f30e6c907a66d65c5846779dba5c0d596ae005`
 - [PenumbraGate tests](https://github.com/luch91/penumbra/blob/main/tests/test_penumbra_gate.py)
 - [PenumbraGate agent](https://github.com/luch91/penumbra/blob/main/agent/review_agent.py)
 ## The catalog -- 20 primitives in 8 families
