@@ -17,9 +17,12 @@ from pathlib import Path
 from typing import Any
 
 
-RUNNER_RE = re.compile(r'^# \{ "Depends": "py-genlayer:[a-z0-9]+" \}$', re.MULTILINE)
+RUNNER_RE = re.compile(
+    r'^# \{ "Depends": "py-genlayer:([a-z0-9]{20,})" \}$', re.MULTILINE
+)
 REQUIRED_DOC_SECTIONS = ("PURPOSE", "CONSENSUS", "STATE DESIGN", "REUSE")
 FORBIDDEN_PUBLIC_TYPES = ("typing.Any", "Any")
+FORBIDDEN_STORAGE_TYPES = {"int", "float", "dict", "list", "typing.Any", "Any"}
 
 
 @dataclass(frozen=True)
@@ -49,7 +52,9 @@ def _compile_check(path: Path) -> CheckResult:
 
 
 def _runner_check(text: str) -> CheckResult:
-    if RUNNER_RE.search(text.split("\n", 1)[0] + "\n"):
+    first_line = text.splitlines()[0] if text.splitlines() else ""
+    match = RUNNER_RE.fullmatch(first_line)
+    if match and match.group(1) not in {"test", "latest"}:
         return CheckResult("runner_hash", True, "pinned runner hash")
     return CheckResult("runner_hash", False, "missing pinned py-genlayer content hash")
 
@@ -75,6 +80,36 @@ def _public_type_check(tree: ast.AST) -> CheckResult:
     if failures:
         return CheckResult("public_types", False, "unsupported return type in " + ", ".join(failures))
     return CheckResult("public_types", True, "no forbidden public return types")
+
+
+def _storage_type_check(tree: ast.AST) -> CheckResult:
+    failures: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for child in node.body:
+            if not isinstance(child, ast.AnnAssign) or child.annotation is None:
+                continue
+            rendered = ast.unparse(child.annotation)
+            if rendered in FORBIDDEN_STORAGE_TYPES:
+                target = ast.unparse(child.target)
+                failures.append(f"{node.name}.{target}: {rendered}")
+    if failures:
+        return CheckResult("storage_types", False, "unsupported storage type: " + ", ".join(failures))
+    return CheckResult("storage_types", True, "class storage uses supported typed fields")
+
+
+def _appeal_method_check(tree: ast.AST) -> CheckResult:
+    forbidden = {"appeal", "reroll", "resubmit_for_review"}
+    found = [
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name in forbidden
+    ]
+    if found:
+        return CheckResult("appeal_methods", False, "custom appeal method: " + ", ".join(found))
+    return CheckResult("appeal_methods", True, "no custom appeal or reroll method")
 
 
 def _balance_transfer_check(tree: ast.AST) -> CheckResult:
@@ -124,6 +159,8 @@ def scan_contract(path: str | Path) -> list[CheckResult]:
         _runner_check(text),
         _doc_check(tree),
         _public_type_check(tree),
+        _storage_type_check(tree),
+        _appeal_method_check(tree),
         _balance_transfer_check(tree),
         _web_scope_check(tree),
     ]

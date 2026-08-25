@@ -7,6 +7,26 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-08-25 -- Phase 1 PenumbraGate compliance completed
+
+**Decision.** Phase 1 changed PenumbraGate from comparative review of
+leader-generated prompts to two `prompt_non_comparative` checks over the same
+deterministic submission JSON, one for each verbatim rubric part. The action
+binding verdict remains categorical: both parts must return ACCEPT for the
+submission to be accepted.
+
+The off-chain agent now rejects unsupported plain storage types and custom
+appeal, reroll, or resubmission methods in addition to its existing ASCII,
+syntax, runner, documentation, transfer, and URL checks. Tests also confirm
+that external rubric text is split without rewriting or truncation.
+
+**Verification.** `py_compile`, the pure-ASCII scan, five agent tests, the
+contract source invariant test, and `git diff --check` passed. The live
+deployment has not been replaced yet because deployment belongs to Phase 3;
+the existing deployment therefore does not represent this updated source.
+
+---
+
 ## 2026-08-25 -- Three-phase completion plan for PenumbraGate
 
 **Decision.** The remaining PenumbraGate work is divided into three phases:

@@ -59,5 +59,5 @@ def test_public_source_has_no_custom_appeal_method():
     assert "def appeal(" not in source
     assert "def reroll(" not in source
     assert "def resubmit_for_review(" not in source
-    assert "prompt_comparative" in source
-    assert "prompt_non_comparative" not in source
+    assert "prompt_non_comparative" in source
+    assert "prompt_comparative" not in source
