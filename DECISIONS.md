@@ -7,6 +7,61 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-08-25 -- Three-phase completion plan for PenumbraGate
+
+**Decision.** The remaining PenumbraGate work is divided into three phases:
+implementation compliance, verification, and final release. The current
+GenShipyard deployment remains a working smoke-test deployment until all
+three phases are complete.
+
+### Phase 1: Implementation compliance
+
+Reconcile `contracts/penumbra_gate.py`, `agent/review_agent.py`, and their
+tests with the PenumbraGate handoff. Confirm the final contract uses the
+required pinned runner, typed storage and public interfaces, the complete
+verbatim rubric at build time, explicit submission-data delimiting, native
+pull-payment transfers, the locked stake policy, and no custom appeal or
+reroll method. Keep the handoff documents outside the repository.
+
+**Exit criteria:** source review finds no known handoff mismatch; all relevant
+tests cover free submission, mandatory later stake, full refund on both
+verdicts, empty strings, agent authorization, and absence of an appeal-shaped
+method.
+
+### Phase 2: Verification and test closure
+
+Resolve or explicitly record evidence for the four open technical questions:
+appeal gas configuration, state replacement across appeal rounds, contract
+visibility into appeal rounds, and the practical rubric-size limit. Run the
+complete test suite through the direct GenLayer CLI where possible, then
+separate source failures from hosted-network or validator failures. Repeat
+the ASCII scan, `py_compile`, static pre-filter checks, and focused tests.
+
+**Exit criteria:** each open question has a documented answer or a visible,
+evidence-backed unresolved status; no source defect is hidden behind an
+environment failure; all tests that can run in the available environment
+pass.
+
+### Phase 3: Final deployment and release evidence
+
+Redeploy the final source through GenShipyard, verify finalization and the
+deployed source, and repeat the live lifecycle: one free submission, a second
+submission with the minimum stake, a finalized verdict, and a complete refund
+through `withdraw`. Update `README.md` with the final contract address,
+GenShipyard link, transaction hashes, test commands, and limitations. Commit
+the release changes and push `main` only after the evidence matches the final
+source.
+
+**Exit criteria:** the deployed source is identical to the reviewed source,
+the live lifecycle is finalized and reproducible, the README is accurate, and
+the repository is clean at the release commit.
+
+**Why.** This order prevents deployment evidence from being mistaken for
+proof of source compliance. It also preserves a clear boundary between
+contract correctness, network-dependent verification, and release paperwork.
+
+---
+
 ## 2026-07-08 -- Forcing JailbreakBounty's break-to-payout path: three real red-team attempts failed, so the test uses an unsatisfiable style rule instead
 
 **Decision.** `tests/test_jailbreak_bounty.py` gained
