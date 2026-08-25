@@ -88,6 +88,29 @@ mandatory stake thereafter, and pull-payment refunds.
 - Full refund withdrawal through [GenShipyard](https://genshipyard.com/): `0x3fe4b876e205c5e90382fd0bd9f30e6c907a66d65c5846779dba5c0d596ae005`
 - [PenumbraGate tests](https://github.com/luch91/penumbra/blob/main/tests/test_penumbra_gate.py)
 - [PenumbraGate agent](https://github.com/luch91/penumbra/blob/main/agent/review_agent.py)
+
+### PenumbraGate agent workflow
+
+The agent is the off-chain coordinator around the on-chain review contract.
+It does not make the verdict and it never merges a contribution.
+
+1. It runs the deterministic pre-filter: syntax, ASCII, pinned runner hash,
+   storage and return-type checks, structural completeness, real-transfer
+   checks, and external URL scope checks.
+2. For submissions that pass, it sends the source and summary as delimited
+   data to `PenumbraGate.submit`. It does not mix submitted text with its own
+   instructions.
+3. It waits for `FINALIZED`, not merely `ACCEPTED`, then reads the verdict and
+   reason from the contract and reports them to the contributor.
+4. It inspects the final receipt for a native appeal. When an appeal is
+   recorded, it calls `mark_appealed` so the public submission record reflects
+   that history.
+5. It recommends acceptance or rejection to the repository owner. The owner
+   makes the final merge decision.
+
+The implementation is in [`agent/review_agent.py`](https://github.com/luch91/penumbra/blob/main/agent/review_agent.py), with focused coverage in
+[`tests/test_penumbra_gate_agent.py`](https://github.com/luch91/penumbra/blob/main/tests/test_penumbra_gate_agent.py).
+
 ## The catalog -- 20 primitives in 8 families
 
 Status legend: ✅ source and integration tests present; all 20 catalogue contracts have deployment records and focused live SDK evidence in `CONTRACTS.md`. The full 143-test Studionet suite is not claimed as passed because hosted RPC runs timed out.
