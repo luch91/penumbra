@@ -20,18 +20,20 @@ The agent never holds stake, makes the verdict, or merges a pull request.
 ## Verification items
 
 1. Minimum gas for appealability: the public APIs expose appeal transactions,
-   appeal bonds, and additional appeal funding, but no developer-side setter.
-   This is resolved by design: PenumbraGate does not release a verdict or
-   merge anything before FINALIZED, and the contract has no appeal-dependent
-   payout. A caller may add appeal funding during the finality window.
+   appeal bonds, fee presets, and additional appeal funding, but no documented
+   Python setter for a contract-level minimum. PenumbraGate does not act on a
+   verdict before FINALIZED. A caller may use a high appeal fee preset or add
+   funding during the finality window. The contract does not claim to set an
+   undocumented value.
 2. State replacement across appeal rounds: a live Studionet counter probe
    showed accumulation, not replacement. PenumbraGate therefore fingerprints
    the sender, submission data, value, and stable raw message timestamp. A
    matching appeal re-execution returns the recorded verdict without appending
    a second record or crediting the refund twice.
-3. In-contract appeal metadata: the current transaction context documents no
-   appeal round or validator-set accessor. This is resolved by design. The
-   agent reads the finalized receipt and alone writes the audit flag.
+3. In-contract appeal metadata: the documented transaction context does not
+   expose an appeal round or validator-set accessor. This is resolved
+   negatively for contract code. The agent reads the finalized receipt and
+   alone writes the audit flag.
 4. Criteria length: no public ceiling was found. A live deployment stored two
    synthetic criteria values with the exact external-rubric part lengths,
    5,773 and 4,834 characters. The agent preserves the full rubric and splits

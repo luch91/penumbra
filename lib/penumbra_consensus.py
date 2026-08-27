@@ -1,4 +1,4 @@
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # PENUMBRA -- shared consensus helpers
 #
 # GenLayer Intelligent Contracts run as a SINGLE Python file inside the GenVM.
@@ -15,7 +15,7 @@
 #   A non-deterministic block is an argument-free inner function. It may NOT
 #   touch `self` or storage. Read what you need into locals first, close over
 #   them, and return a *canonical* value the validators can compare.
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 import json
 

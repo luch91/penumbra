@@ -129,7 +129,7 @@ For each contract you must produce:
   - tests/test_<snake_name>.py -- gltest tests that assert INVARIANTS and SHAPES
     only (preconditions revert, dedupe, ledger math, score ranges, clear-cut
     inputs land on the expected side of a threshold). Never assert exact LLM text.
-  - flip the entry in CONTRACTS.md and README.md from ◻️ to ✅ and link the source.
+  - flip the entry in CONTRACTS.md and README.md from o to [x] and link the source.
 
 After writing each contract:
 1. Run `python3 -m py_compile contracts/<file>.py` and fix any syntax error.
@@ -177,7 +177,7 @@ never TreeMap[str, typing.Any]. Do not read gl.message.datetime (does not
 exist on this runner -- see semantic_deadman.py for the content-diffing
 alternative). Wrap any gl.nondet.web.* call in try/except inside its nondet
 closure (fetch failure raises an uncaught NondetException otherwise). Deliver
-contracts/<snake>.py + tests/test_<snake>.py (invariant-based) and flip its ✅
+contracts/<snake>.py + tests/test_<snake>.py (invariant-based) and flip its [x]
 in CONTRACTS.md and README.md. py_compile the file, then live-smoke-test it
 via `genlayer deploy` / `call` / `write` before considering it done --
 py_compile alone did not catch any of the seven bugs found in the existing

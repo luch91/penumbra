@@ -7,6 +7,39 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-08-27 -- Final PenumbraGate deployment and lifecycle evidence
+
+**Decision.** The corrected PenumbraGate source was deployed through GenShipyard
+at `0x121b3e63a721ABd30dd87bB5675ece1B7Ea6d1F7`. The deployment finalized with
+`MAJORITY_AGREE` and five validators in transaction
+`0x3acd153a303610642bcc7fd05b59515efdf147095abc0489adbbe5ec1081bb5f`.
+
+The lifecycle was completed against that address. The first free submission
+finalized with `MAJORITY_AGREE` in transaction
+`0xcc582c556c0441f2642635179fee96c93dadbda0de1d90c981016a1c6f380612`. The
+second submission finalized with `MAJORITY_AGREE` and a value of
+`200000000000000000` wei in transaction
+`0xaf58a41b4a707b0357cdead849b6a1e41d9003bb584e2e44bc7902ab755a9057`.
+The contract then reported two submissions and a claimable balance of the same
+amount. Withdrawal finalized with `MAJORITY_AGREE` in transaction
+`0x571ce0683f12dccd6ae2af383c5980bfbc2b4897dcf86c338e924910ae4d1556`, and a
+subsequent read returned claimable balance `0`.
+
+The first live submission failure exposed a source defect: a string was passed
+directly to `prompt_non_comparative` instead of an argument-free callable. The
+corrected source now wraps the prompt in `review()` and passes that callable to
+both equivalence checks. Validator receipts for the successful lifecycle runs
+showed `SUCCESS` execution.
+
+The remaining protocol limits are explicit. Official documentation confirms
+appeal fee top-ups and fee presets but does not document a contract-side minimum
+gas setter. Official transaction-context documentation does not expose appeal
+round metadata inside contract code. The exact rubric parts, 5,773 and 4,834
+characters, deployed successfully. No undocumented maximum criteria length is
+claimed.
+
+---
+
 ## 2026-08-25 -- Phase 2 empirical probes and appeal idempotency
 
 **Decision.** The disposable probes were rerun after Studio DNS recovered.

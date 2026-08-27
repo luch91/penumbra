@@ -76,16 +76,17 @@ The catalog below covers all 20 contracts. Each contract has its own source file
 
 PenumbraGate is the catalog contribution review primitive. Its finalized
 Studionet deployment uses the pinned runner, the full NN-1 through NN-8 rubric,
-comparative consensus for both rubric parts, one free submission per address,
+non-comparative consensus for both rubric parts, one free submission per address,
 mandatory stake thereafter, and pull-payment refunds.
 
 - [PenumbraGate source](https://github.com/luch91/penumbra/blob/main/contracts/penumbra_gate.py)
-- [PenumbraGate contract](https://explorer-studio.genlayer.com/address/0xF45009635A785fE8469935A07F653AF6E9c26c2A)
-- PenumbraGate deployment through [GenShipyard](https://genshipyard.com/): `0x50bcc7d3f121005bdf5c6098727cd1fe2f2e33753474d98ab1fc4eb286d5659e`
+- [PenumbraGate contract](https://explorer-studio.genlayer.com/address/0x121b3e63a721ABd30dd87bB5675ece1B7Ea6d1F7)
+- PenumbraGate deployment through [GenShipyard](https://genshipyard.com/): [0x3acd153a303610642bcc7fd05b59515efdf147095abc0489adbbe5ec1081bb5f](https://explorer-studio.genlayer.com/tx/0x3acd153a303610642bcc7fd05b59515efdf147095abc0489adbbe5ec1081bb5f)
 - Deployment wallet: `0x7048781a2Fc941617995f8c4542A1908500C0703`
-- Free submission through [GenShipyard](https://genshipyard.com/): `0x90225875942d4794aaf50cd6574b7e6f60bb863166797a315e9d8aa3bff9c9cd`
-- Staked submission through [GenShipyard](https://genshipyard.com/): `0xca15a0d9932b053d6508bbee77cb62907ada8d0fbd0d0f739d714ca684b8ed74`
-- Full refund withdrawal through [GenShipyard](https://genshipyard.com/): `0x3fe4b876e205c5e90382fd0bd9f30e6c907a66d65c5846779dba5c0d596ae005`
+- Free submission through [GenShipyard](https://genshipyard.com/): [0xcc582c556c0441f2642635179fee96c93dadbda0de1d90c981016a1c6f380612](https://explorer-studio.genlayer.com/tx/0xcc582c556c0441f2642635179fee96c93dadbda0de1d90c981016a1c6f380612)
+- Staked submission through [GenShipyard](https://genshipyard.com/), with 0.2 GEN: [0xaf58a41b4a707b0357cdead849b6a1e41d9003bb584e2e44bc7902ab755a9057](https://explorer-studio.genlayer.com/tx/0xaf58a41b4a707b0357cdead849b6a1e41d9003bb584e2e44bc7902ab755a9057)
+- Full refund withdrawal through [GenShipyard](https://genshipyard.com/): [0x571ce0683f12dccd6ae2af383c5980bfbc2b4897dcf86c338e924910ae4d1556](https://explorer-studio.genlayer.com/tx/0x571ce0683f12dccd6ae2af383c5980bfbc2b4897dcf86c338e924910ae4d1556)
+- Final state evidence: submission count `2`; claimable balance `0` after withdrawal.
 - [PenumbraGate tests](https://github.com/luch91/penumbra/blob/main/tests/test_penumbra_gate.py)
 - [PenumbraGate agent](https://github.com/luch91/penumbra/blob/main/agent/review_agent.py)
 
@@ -113,43 +114,43 @@ The implementation is in [`agent/review_agent.py`](https://github.com/luch91/pen
 
 ## The catalog -- 20 primitives in 8 families
 
-Status legend: ✅ source and integration tests present; all 20 catalogue contracts have deployment records and focused live SDK evidence in `CONTRACTS.md`. The full 154-test Studionet suite is not claimed as passed because the hosted RPC test process stalled during live contract setup.
+Status legend: [x] source and integration tests present; all 20 catalogue contracts have deployment records and focused live SDK evidence in `CONTRACTS.md`. The full 154-test Studionet suite is not claimed as passed because the hosted RPC test process stalled during live contract setup.
 
-### I · Oracles of Doubt -- *disagreement as signal*
-1. ✅ **DissensusOracle** -- answers a contested question *and* publishes a `dissensus` score by self-ensembling K expert opinions; the comparative principle forces validators to agree on both the verdict and how hard the question was. Downstream contracts gate on it. → `contracts/dissensus_oracle.py`
-2. ✅ **AmbiguityGuard** -- a wrapper that performs any judgment but writes `ABSTAIN` instead of a verdict when the question is too ambiguous for validators to reliably converge. Consensus-aware refusal. → `contracts/ambiguity_guard.py`
+### I - Oracles of Doubt -- *disagreement as signal*
+1. [x] **DissensusOracle** -- answers a contested question *and* publishes a `dissensus` score by self-ensembling K expert opinions; the comparative principle forces validators to agree on both the verdict and how hard the question was. Downstream contracts gate on it. -> `contracts/dissensus_oracle.py`
+2. [x] **AmbiguityGuard** -- a wrapper that performs any judgment but writes `ABSTAIN` instead of a verdict when the question is too ambiguous for validators to reliably converge. Consensus-aware refusal. -> `contracts/ambiguity_guard.py`
 
-### II · Asymmetric Rites -- *generate hard, verify cheap*
-3. ✅ **ProofCarryingAnswer** -- submit a claim plus the reasoning that backs it; the network attests it only if the proof holds, using the non-comparative principle so validators audit rather than re-derive. → `contracts/proof_carrying_answer.py`
-4. ✅ **PolyglotConsensus** -- accepts a claim in any language; the principle is translation-invariant, so heterogeneous-language validators must agree on *meaning*. Turns the diverse validator set into a feature. → `contracts/polyglot_consensus.py`
+### II - Asymmetric Rites -- *generate hard, verify cheap*
+3. [x] **ProofCarryingAnswer** -- submit a claim plus the reasoning that backs it; the network attests it only if the proof holds, using the non-comparative principle so validators audit rather than re-derive. -> `contracts/proof_carrying_answer.py`
+4. [x] **PolyglotConsensus** -- accepts a claim in any language; the principle is translation-invariant, so heterogeneous-language validators must agree on *meaning*. Turns the diverse validator set into a feature. -> `contracts/polyglot_consensus.py`
 
-### III · Semantic Machines -- *state transitions gated by meaning*
-5. ✅ **SemanticCommitReveal** -- commit-reveal where a reveal counts if it *means* the commitment, not if it hashes to it. Fuzzy-intent anti-front-running. → `contracts/semantic_commit_reveal.py`
-6. ✅ **IntentLock** -- access control by plain-language policy: an action unlocks iff consensus judges it satisfies the policy. A semantic ACL. → `contracts/intent_lock.py`
-7. ✅ **SemanticDiffLedger** -- versioned document where consensus decides which edits are *material* vs cosmetic; only material edits bump the version. Meaning-gated version control. → `contracts/semantic_diff_ledger.py`
-8. ✅ **ConstitutionalContract** -- holds a prose constitution with immutable core principles; amendments pass only if consensus judges them consistent with the core. Governance as machine-adjudicated consistency. → `contracts/constitutional_contract.py`
+### III - Semantic Machines -- *state transitions gated by meaning*
+5. [x] **SemanticCommitReveal** -- commit-reveal where a reveal counts if it *means* the commitment, not if it hashes to it. Fuzzy-intent anti-front-running. -> `contracts/semantic_commit_reveal.py`
+6. [x] **IntentLock** -- access control by plain-language policy: an action unlocks iff consensus judges it satisfies the policy. A semantic ACL. -> `contracts/intent_lock.py`
+7. [x] **SemanticDiffLedger** -- versioned document where consensus decides which edits are *material* vs cosmetic; only material edits bump the version. Meaning-gated version control. -> `contracts/semantic_diff_ledger.py`
+8. [x] **ConstitutionalContract** -- holds a prose constitution with immutable core principles; amendments pass only if consensus judges them consistent with the core. Governance as machine-adjudicated consistency. -> `contracts/constitutional_contract.py`
 
-### IV · Adversaria -- *consensus as referee in a game*
-9. ✅ **JailbreakBounty** -- escrow that pays a challenger iff independent validators agree their prompt broke a stated rule. The inverse of Wizard-of-Coin: breaking the guard is the win, and the network is the impartial judge. → `contracts/jailbreak_bounty.py`
-10. ✅ **SchellingResolver** -- players answer a subjective question; consensus clusters the answers and rewards those who matched the focal meaning. Keynesian beauty contest via semantic clustering. → `contracts/schelling_resolver.py`
-11. ✅ **AdversarialReview** -- stages two opposing LLM advocates inside the leader block; validators judge which case is stronger. Debate-as-consensus. → `contracts/adversarial_review.py`
+### IV - Adversaria -- *consensus as referee in a game*
+9. [x] **JailbreakBounty** -- escrow that pays a challenger iff independent validators agree their prompt broke a stated rule. The inverse of Wizard-of-Coin: breaking the guard is the win, and the network is the impartial judge. -> `contracts/jailbreak_bounty.py`
+10. [x] **SchellingResolver** -- players answer a subjective question; consensus clusters the answers and rewards those who matched the focal meaning. Keynesian beauty contest via semantic clustering. -> `contracts/schelling_resolver.py`
+11. [x] **AdversarialReview** -- stages two opposing LLM advocates inside the leader block; validators judge which case is stronger. Debate-as-consensus. -> `contracts/adversarial_review.py`
 
-### V · Corroboration -- *trustless web, verified across sources*
-12. ✅ **CorroborationOracle** -- fetches N independent sources and accepts a fact only if cross-source agreement clears a threshold; exposes the corroboration ratio. → `contracts/corroboration_oracle.py`
-13. ✅ **ProvenanceAttestor** -- given a claim + source, emits an attestation with the extracted supporting span; validators independently re-confirm the span backs the claim. Citation-chain provenance. → `contracts/provenance_attestor.py`
-14. ✅ **CanaryTripwire** -- monitors a web source for a plain-language tripwire and flips state (and can call back another contract) when consensus judges the condition met. An on-chain monitor; the first primitive here to confirm a live cross-contract WRITE callback. → `contracts/canary_tripwire.py`
+### V - Corroboration -- *trustless web, verified across sources*
+12. [x] **CorroborationOracle** -- fetches N independent sources and accepts a fact only if cross-source agreement clears a threshold; exposes the corroboration ratio. -> `contracts/corroboration_oracle.py`
+13. [x] **ProvenanceAttestor** -- given a claim + source, emits an attestation with the extracted supporting span; validators independently re-confirm the span backs the claim. Citation-chain provenance. -> `contracts/provenance_attestor.py`
+14. [x] **CanaryTripwire** -- monitors a web source for a plain-language tripwire and flips state (and can call back another contract) when consensus judges the condition met. An on-chain monitor; the first primitive here to confirm a live cross-contract WRITE callback. -> `contracts/canary_tripwire.py`
 
-### VI · Reflexion -- *contracts that reason about consensus*
-15. ✅ **ConsensusThermometer** -- runs a cheap "would the validators even agree?" pre-check before committing an expensive decision, and routes to a fallback when predicted agreement is low. Self-aware meta-consensus. → `contracts/consensus_thermometer.py`
-16. ✅ **MirrorAudit** -- given another contract's address and a behavioral spec, reads its public state via contract-to-contract calls and judges via consensus whether it conforms. Contracts auditing contracts. → `contracts/mirror_audit.py`
-17. ✅ **EquivalenceRegistry** -- named, reusable equivalence principles as first-class on-chain objects other contracts fetch and apply. The one primitive here that runs *no* consensus block of its own -- it exists to be read. Composable consensus policy as infrastructure. → `contracts/equivalence_registry.py`
+### VI - Reflexion -- *contracts that reason about consensus*
+15. [x] **ConsensusThermometer** -- runs a cheap "would the validators even agree?" pre-check before committing an expensive decision, and routes to a fallback when predicted agreement is low. Self-aware meta-consensus. -> `contracts/consensus_thermometer.py`
+16. [x] **MirrorAudit** -- given another contract's address and a behavioral spec, reads its public state via contract-to-contract calls and judges via consensus whether it conforms. Contracts auditing contracts. -> `contracts/mirror_audit.py`
+17. [x] **EquivalenceRegistry** -- named, reusable equivalence principles as first-class on-chain objects other contracts fetch and apply. The one primitive here that runs *no* consensus block of its own -- it exists to be read. Composable consensus policy as infrastructure. -> `contracts/equivalence_registry.py`
 
-### VII · Chronomancy -- *time and liveness, judged*
-18. ✅ **SemanticDeadman** -- a dead-man's switch that releases on *semantic* inactivity (no genuine public activity at a source), not just a missed timestamp ping. → `contracts/semantic_deadman.py`
-19. ✅ **EscalatingVerdict** -- a dispute primitive whose consensus rigor scales with stakes: `strict_eq` for pennies, `comparative` mid, multi-lens `non_comparative` review for serious money. Tiered, economical consensus. → `contracts/escalating_verdict.py`
+### VII - Chronomancy -- *time and liveness, judged*
+18. [x] **SemanticDeadman** -- a dead-man's switch that releases on *semantic* inactivity (no genuine public activity at a source), not just a missed timestamp ping. -> `contracts/semantic_deadman.py`
+19. [x] **EscalatingVerdict** -- a dispute primitive whose consensus rigor scales with stakes: `strict_eq` for pennies, `comparative` mid, multi-lens `non_comparative` review for serious money. Tiered, economical consensus. -> `contracts/escalating_verdict.py`
 
-### VIII · Markets of Meaning -- *economic primitives with judgment baked in*
-20. ✅ **RealitySettledMarket** -- a binary market that self-settles from primary sources with an ambiguity guard: when sources conflict or are too weak, it refuses to settle and refunds every stake rather than guess. The final primitive, composing the ambiguity gate and the guarded web fetch. → `contracts/reality_settled_market.py`
+### VIII - Markets of Meaning -- *economic primitives with judgment baked in*
+20. [x] **RealitySettledMarket** -- a binary market that self-settles from primary sources with an ambiguity guard: when sources conflict or are too weak, it refuses to settle and refunds every stake rather than guess. The final primitive, composing the ambiguity gate and the guarded web fetch. -> `contracts/reality_settled_market.py`
 
 ---
 
@@ -157,58 +158,58 @@ Status legend: ✅ source and integration tests present; all 20 catalogue contra
 
 ```
 penumbra/
-├── README.md                  ← you are here (thesis + catalog)
-├── CONTRACTS.md               ← one-pager spec per primitive (purpose · consensus · state · API · reuse)
-├── gltest.config.yaml
-├── requirements-dev.txt
-├── lib/
-│   └── penumbra_consensus.py  ← the four consensus moves as documented copy-paste helpers
-├── contracts/                 ← one standalone GenVM file per primitive
-│   ├── dissensus_oracle.py
-│   ├── jailbreak_bounty.py
-│   ├── proof_carrying_answer.py
-│   ├── schelling_resolver.py
-│   ├── semantic_deadman.py
-│   ├── mirror_audit.py
-│   ├── consensus_thermometer.py
-│   ├── ambiguity_guard.py
-│   ├── polyglot_consensus.py
-│   ├── semantic_commit_reveal.py
-│   ├── intent_lock.py
-│   ├── semantic_diff_ledger.py
-│   ├── constitutional_contract.py
-│   ├── corroboration_oracle.py
-│   ├── provenance_attestor.py
-│   ├── canary_tripwire.py
-│   ├── escalating_verdict.py
-│   ├── adversarial_review.py
-│   ├── equivalence_registry.py
-│   ├── reality_settled_market.py
-│   └── fixtures/              ← test-only stand-ins, not catalog primitives
-│       ├── audit_stub_target.py
-│       └── tripwire_callback_stub.py
-└── tests/                     ← gltest integration tests; assert invariants, never LLM strings
-    ├── test_dissensus_oracle.py
-    ├── test_jailbreak_bounty.py
-    ├── test_proof_carrying_answer.py
-    ├── test_schelling_resolver.py
-    ├── test_semantic_deadman.py
-    ├── test_mirror_audit.py
-    ├── test_mirror_audit_read.py
-    ├── test_consensus_thermometer.py
-    ├── test_ambiguity_guard.py
-    ├── test_polyglot_consensus.py
-    ├── test_semantic_commit_reveal.py
-    ├── test_intent_lock.py
-    ├── test_semantic_diff_ledger.py
-    ├── test_constitutional_contract.py
-    ├── test_corroboration_oracle.py
-    ├── test_provenance_attestor.py
-    ├── test_canary_tripwire.py
-    ├── test_escalating_verdict.py
-    ├── test_adversarial_review.py
-    ├── test_equivalence_registry.py
-    └── test_reality_settled_market.py
++-- README.md                  <- you are here (thesis + catalog)
++-- CONTRACTS.md               <- one-pager spec per primitive (purpose - consensus - state - API - reuse)
++-- gltest.config.yaml
++-- requirements-dev.txt
++-- lib/
+|   |-- penumbra_consensus.py  <- the four consensus moves as documented copy-paste helpers
++-- contracts/                 <- one standalone GenVM file per primitive
+|   |-- dissensus_oracle.py
+|   |-- jailbreak_bounty.py
+|   |-- proof_carrying_answer.py
+|   |-- schelling_resolver.py
+|   |-- semantic_deadman.py
+|   |-- mirror_audit.py
+|   |-- consensus_thermometer.py
+|   |-- ambiguity_guard.py
+|   |-- polyglot_consensus.py
+|   |-- semantic_commit_reveal.py
+|   |-- intent_lock.py
+|   |-- semantic_diff_ledger.py
+|   |-- constitutional_contract.py
+|   |-- corroboration_oracle.py
+|   |-- provenance_attestor.py
+|   |-- canary_tripwire.py
+|   |-- escalating_verdict.py
+|   |-- adversarial_review.py
+|   |-- equivalence_registry.py
+|   |-- reality_settled_market.py
+|   |-- fixtures/              <- test-only stand-ins, not catalog primitives
+|       |-- audit_stub_target.py
+|       |-- tripwire_callback_stub.py
++-- tests/                     <- gltest integration tests; assert invariants, never LLM strings
+    |-- test_dissensus_oracle.py
+    |-- test_jailbreak_bounty.py
+    |-- test_proof_carrying_answer.py
+    |-- test_schelling_resolver.py
+    |-- test_semantic_deadman.py
+    |-- test_mirror_audit.py
+    |-- test_mirror_audit_read.py
+    |-- test_consensus_thermometer.py
+    |-- test_ambiguity_guard.py
+    |-- test_polyglot_consensus.py
+    |-- test_semantic_commit_reveal.py
+    |-- test_intent_lock.py
+    |-- test_semantic_diff_ledger.py
+    |-- test_constitutional_contract.py
+    |-- test_corroboration_oracle.py
+    |-- test_provenance_attestor.py
+    |-- test_canary_tripwire.py
+    |-- test_escalating_verdict.py
+    |-- test_adversarial_review.py
+    |-- test_equivalence_registry.py
+    |-- test_reality_settled_market.py
 ```
 
 GenLayer contracts run as a single Python file inside the GenVM -- there is no `pip install` and no cross-file import at deploy time. `lib/penumbra_consensus.py` is therefore not an imported module but a curated block: each contract inlines the few helpers it needs.
