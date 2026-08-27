@@ -24,6 +24,12 @@ def _deploy():
     return get_contract_factory("AdversarialReview").deploy()
 
 
+def test_source_normalizes_markdown_code_fenced_json():
+    source = open("contracts/adversarial_review.py", encoding="ascii").read()
+    assert "def parse_json_response" in source
+    assert 'value.startswith("```")' in source
+
+
 def test_deploys_empty():
     c = _deploy()
     assert c.count().call() == 0

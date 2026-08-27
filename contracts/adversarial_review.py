@@ -62,6 +62,18 @@ def require(condition: bool, message: str) -> None:
 
 def canonical(obj) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"))
+
+
+def parse_json_response(text: str) -> dict:
+    value = text.strip()
+    if value.startswith("```"):
+        lines = value.splitlines()
+        if lines and lines[0].strip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        value = "\n".join(lines).strip()
+    return json.loads(value)
 # ------------------------------------------------------------------------------
 
 
@@ -119,7 +131,7 @@ class AdversarialReview(gl.Contract):
         raw = gl.eq_principle.prompt_non_comparative(
             verification_input, task=task, criteria=criteria
         )
-        verdict = json.loads(raw) if isinstance(raw, str) else raw
+        verdict = parse_json_response(raw) if isinstance(raw, str) else raw
 
         winner = str(verdict["winner"]).strip().lower()
         require(winner in ("pro", "con"), "verdict did not name pro or con as winner")
