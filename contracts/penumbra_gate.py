@@ -155,11 +155,20 @@ class PenumbraGate(gl.Contract):
         criteria_a = self.criteria_a
         criteria_b = self.criteria_b
 
+        def review() -> str:
+            prompt = (
+                task
+                + "\nSUBMISSION_DATA_JSON_BEGIN\n"
+                + data
+                + "\nSUBMISSION_DATA_JSON_END"
+            )
+            return gl.nondet.exec_prompt(prompt)
+
         result_a = gl.eq_principle.prompt_non_comparative(
-            data, task=task, criteria=criteria_a
+            review, task=task, criteria=criteria_a
         )
         result_b = gl.eq_principle.prompt_non_comparative(
-            data, task=task, criteria=criteria_b
+            review, task=task, criteria=criteria_b
         )
         decision_a = parse_json_response(result_a) if isinstance(result_a, str) else result_a
         decision_b = parse_json_response(result_b) if isinstance(result_b, str) else result_b
