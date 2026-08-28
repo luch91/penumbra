@@ -17,6 +17,24 @@ The agent performs cheap deterministic checks before a paid contract call:
 
 The agent never holds stake, makes the verdict, or merges a pull request.
 
+## Production operation
+
+`agent.monitor.monitor_submission` waits for `FINALIZED` and records a native
+appeal through `mark_appealed` when the final receipt shows a later round. The
+monitor must run with the deployed contract address and the submission id
+returned by the intake workflow.
+
+`agent.github_pr.GitHubPRReporter` is an optional reporting adapter. Set
+`PENUMBRA_GITHUB_TOKEN` in the runner secret store, parse the pull request
+webhook payload with `parse_pull_request_ref`, and report the finalized verdict
+with `comment`. On ACCEPT, add an approval label. On REJECT, add the reason and
+close the pull request. The adapter has no merge method by design.
+
+The repository workflow runs compilation, the ASCII scan, and deterministic
+agent tests on every pull request and push to `main`. The full 155-test
+Studionet suite is available only through manual workflow dispatch because it
+uses live consensus and normally takes more than an hour.
+
 ## Verification items
 
 1. Minimum gas for appealability: the public APIs expose appeal transactions,

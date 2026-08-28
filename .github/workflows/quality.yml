@@ -1,0 +1,58 @@
+name: Penumbra quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      live_suite:
+        description: Run the full Studionet suite
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  deterministic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python files
+        run: python -m compileall -q contracts tests agent
+      - name: Check pure ASCII source and documentation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          ignored = {".git", "artifacts", "__pycache__", ".pytest_cache"}
+          for path in Path(".").rglob("*"):
+              if not path.is_file() or any(part in ignored for part in path.parts):
+                  continue
+              if path.suffix == ".pyc":
+                  continue
+              path.read_bytes().decode("ascii")
+          PY
+      - name: Run agent unit tests
+        run: python -m pytest -q tests/test_penumbra_gate_agent.py tests/test_github_pr.py tests/test_monitor.py
+
+  live-studionet:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.live_suite == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: genlayer
+          python-version: "3.12"
+          auto-activate-base: false
+      - name: Install GenLayer test tooling
+        shell: bash -el {0}
+        run: python -m pip install -r requirements-dev.txt
+      - name: Run full Studionet catalog suite
+        shell: bash -el {0}
+        run: gltest --network studionet tests

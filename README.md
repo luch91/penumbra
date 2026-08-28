@@ -112,6 +112,18 @@ It does not make the verdict and it never merges a contribution.
 The implementation is in [`agent/review_agent.py`](https://github.com/luch91/penumbra/blob/main/agent/review_agent.py), with focused coverage in
 [`tests/test_penumbra_gate_agent.py`](https://github.com/luch91/penumbra/blob/main/tests/test_penumbra_gate_agent.py).
 
+### Operational hardening
+
+The repository includes a GitHub PR reporting adapter and a finalized
+transaction monitor. The adapter reports the on-chain recommendation but has
+no merge capability. The monitor waits for finality and records native appeals
+when the finalized receipt shows a later validator round.
+
+The GitHub Actions quality workflow runs compilation, the pure-ASCII scan, and
+agent tests on every pull request and push to `main`. The complete 155-test
+Studionet suite is available through manual workflow dispatch because it uses
+live consensus and normally takes more than an hour.
+
 ## The catalog -- 20 primitives in 8 families
 
 Status legend: [x] source and integration tests present; all 20 catalogue contracts have deployment records and focused live SDK evidence in `CONTRACTS.md`. The full 155-test Studionet suite passed on 2026-08-28 after the live test fixes recorded in `DECISIONS.md`.
