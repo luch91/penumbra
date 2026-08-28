@@ -7,6 +7,23 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-08-28 -- Full Studionet catalog suite passed
+
+**Verification.** The complete `gltest --network studionet tests` run collected
+155 tests and passed all 155 in 1:44:13. The run included the PenumbraGate
+contract tests and agent tests, as well as all 20 catalog contract suites.
+
+The final static checks also passed: every repository source and documentation
+file passed the pure-ASCII scan, and `python -m compileall -q contracts tests
+agent` passed in the `genlayer` environment. The working tree was clean after
+the verification commit `e1ca409`.
+
+**How to apply.** Use this result as the current full-suite baseline. Future
+changes must rerun the complete Studionet suite and the static checks before
+being described as fully verified.
+
+---
+
 ## 2026-08-27 -- Final PenumbraGate deployment and lifecycle evidence
 
 **Decision.** The corrected PenumbraGate source was deployed through GenShipyard
