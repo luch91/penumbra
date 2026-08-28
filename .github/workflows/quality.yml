@@ -20,6 +20,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install test tooling
+        run: python -m pip install -r requirements-dev.txt
       - name: Compile Python files
         run: python -m compileall -q contracts tests agent
       - name: Check pure ASCII source and documentation
