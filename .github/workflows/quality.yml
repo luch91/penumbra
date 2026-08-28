@@ -47,6 +47,8 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.live_suite == true }}
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    env:
+      ACCOUNT_PRIVATE_KEY_1: "0x0000000000000000000000000000000000000000000000000000000000000001"
     steps:
       - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v3
