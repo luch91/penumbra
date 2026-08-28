@@ -54,6 +54,11 @@ def test_focal_cluster_wins_and_pool_splits():
     a = create_account()
     b = create_account()
     d = create_account()
+    accounts = {
+        a.address.lower(): a,
+        b.address.lower(): b,
+        d.address.lower(): d,
+    }
 
     # Two submitters converge on the same focal answer, one is an outlier.
     assert tx_execution_succeeded(
@@ -85,9 +90,9 @@ def test_focal_cluster_wins_and_pool_splits():
         assert owed > 0
         assert owed <= 3000
         assert tx_execution_succeeded(
-            c.connect(account=rec["submitter"]).claim().transact()
+            c.connect(account=accounts[rec["submitter"].lower()]).claim().transact()
         )
-        assert c.claimable_of(args=[rec["submitter"]]).call() == 0
+        assert c.claimable_of(args=[accounts[rec["submitter"].lower()].address]).call() == 0
 
 
 def test_double_resolve_reverts():
