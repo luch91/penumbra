@@ -1,6 +1,10 @@
 networks:
   default: studionet
-  studionet: {}
+  studionet:
+    # Studionet enforces a 500-requests/hour RPC limit.  A slower poll keeps
+    # the full live suite below that ceiling while preserving finality waits.
+    default_wait_interval: 5000
+    default_wait_retries: 50
   localnet:
     url: "http://127.0.0.1:4000/api"
     leader_only: false
