@@ -120,13 +120,13 @@ no merge capability. The monitor waits for finality and records native appeals
 when the finalized receipt shows a later validator round.
 
 The GitHub Actions quality workflow runs compilation, the pure-ASCII scan, and
-agent tests on every pull request and push to `main`. The complete 155-test
-Studionet suite is available through manual workflow dispatch because it uses
+agent tests on every pull request and push to `main`. The last recorded
+155-test Studionet suite is available through manual workflow dispatch because it uses
 live consensus and normally takes more than an hour.
 
 ## The catalog -- 20 primitives in 8 families
 
-Status legend: [x] source and integration tests present; all 20 catalogue contracts have deployment records and focused live SDK evidence in `CONTRACTS.md`. The full 155-test Studionet suite passed on 2026-08-28 after the live test fixes recorded in `DECISIONS.md`.
+Status legend: [x] source and integration tests present; all 20 catalogue contracts have deployment records and focused live SDK evidence in `CONTRACTS.md`. A 155-test Studionet suite passed on 2026-08-28; the current checkout collects 160 tests, so the expanded suite still needs a fresh live run.
 
 ### I - Oracles of Doubt -- *disagreement as signal*
 1. [x] **DissensusOracle** -- answers a contested question *and* publishes a `dissensus` score by self-ensembling K expert opinions; the comparative principle forces validators to agree on both the verdict and how hard the question was. Downstream contracts gate on it. -> `contracts/dissensus_oracle.py`

@@ -31,9 +31,11 @@ with `comment`. On ACCEPT, add an approval label. On REJECT, add the reason and
 close the pull request. The adapter has no merge method by design.
 
 The repository workflow runs compilation, the ASCII scan, and deterministic
-agent tests on every pull request and push to `main`. The full 155-test
-Studionet suite is available only through manual workflow dispatch because it
-uses live consensus and normally takes more than an hour.
+agent tests on every pull request and push to `main`. The full Studionet suite
+is available only through manual workflow dispatch because it uses live
+consensus and normally takes more than an hour. The last recorded run passed
+155 tests; the current checkout collects 160, so a fresh live run is required
+after the expanded test set.
 
 ## Verification items
 

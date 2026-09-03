@@ -1,17 +1,16 @@
 # Claude Code prompts for Penumbra
 
-Paste the batch prompt below into Claude Code from the repo root (after `claude` picks up `CLAUDE.md`). A reusable single-contract template follows it.
+Paste the batch prompt below into Claude Code from the repo root. A reusable single-contract template follows it.
 
 ---
 
 ## Batch 2 kickoff (paste this)
 
 ```
-Read CLAUDE.md, README.md, and CONTRACTS.md in full before writing anything --
-CLAUDE.md's "Known blockers & open verification gaps" section is not optional
+Read README.md, CONTRACTS.md, and DECISIONS.md in full before writing anything.
 reading: it documents ten bugs that passed py_compile cleanly and only broke
 on a live deploy. Do not reproduce them.
-Then read all six existing built contracts as the style and correctness reference:
+Then read the existing catalog contracts and PenumbraGate as the style and correctness reference:
 contracts/dissensus_oracle.py, contracts/jailbreak_bounty.py,
 contracts/proof_carrying_answer.py, contracts/schelling_resolver.py,
 contracts/semantic_deadman.py, contracts/mirror_audit.py. Match their
@@ -23,14 +22,15 @@ Build the next primitive:
   1. ConsensusThermometer   (family VI)  -- cheap agreement pre-check, routes to a fallback when low
 
 This depends on gl.get_contract_at READS, which are now confirmed live (see
-CLAUDE.md "Known blockers" -- cross-contract view() calls return values
+DECISIONS.md documents the runner-specific cross-contract view() behavior
 directly, confirmed via MirrorAudit). If ConsensusThermometer also needs
 cross-contract WRITES (.emit()), that half is still completely unverified --
 build it defensively per the MirrorAudit instructions below regardless, and
 treat the first live deploy as the actual test, not a formality.
 
 Use the spec for each in CONTRACTS.md as the contract; do not redesign the
-purpose or the consensus move. Honor every rule in CLAUDE.md, in particular:
+purpose or the consensus move. Honor the repository rules in README.md and
+the implementation decisions in DECISIONS.md, in particular:
 - Target the `py-genlayer` runner pinned to a runner hash (never a floating tag
   like py-genlayer:test, which is rejected at deploy) with `from genlayer import *`
   and `class X(gl.Contract)`. Do NOT use the v0.3 `import genlayer as gl` layout.
@@ -64,9 +64,9 @@ purpose or the consensus move. Honor every rule in CLAUDE.md, in particular:
   logger that would show this is disabled by default, so the failure looks
   like a generic, unexplained "Failed to get schema from all clients" instead.
   Every existing contract in this repo was fixed for exactly this (see
-  CLAUDE.md "Known blockers" and DECISIONS.md's 2026-07-01 entry). Use --, -,
+  DECISIONS.md's 2026-07-01 entry). Use --, -,
   ., and ... instead. This restriction is ONLY for files under contracts/ --
-  README.md/CONTRACTS.md/CLAUDE.md/docs/*.md are unaffected and keep normal
+README.md/CONTRACTS.md/DECISIONS.md/docs/*.md are unaffected and keep normal
   typography.
 - Do NOT read gl.message.datetime, or assume any clock/timestamp/block-number
   accessor exists. Confirmed live: this pinned runner's gl.message exposes
@@ -145,7 +145,7 @@ After writing each contract:
    via validator consensus even when every validator independently errored
    (this happened during Penumbra's own smoke testing: all validators agreed
    the contract was invalid, and consensus still "succeeded").
-3. gltest now works end-to-end in this repo (see CLAUDE.md "Known blockers" --
+3. gltest now works end-to-end in this repo (see DECISIONS.md --
    it took finding a real UnicodeEncodeError bug to get there, fixed by
    keeping contracts/*.py pure ASCII per the rule above). Run
    `gltest --network studionet tests/test_<snake>.py` (conda env `genlayer`,
@@ -166,7 +166,7 @@ your assumption inline in the docstring rather than asking -- keep momentum.
 Use this to build any one primitive from the queue later:
 
 ```
-Read CLAUDE.md (including "Known blockers & open verification gaps") and the
+Read README.md, CONTRACTS.md, and DECISIONS.md and the
 six built contracts first. Build <NAME> exactly as specified in
 CONTRACTS.md (family <N>). Consensus move: <strict_eq | prompt_comparative |
 prompt_non_comparative | run_nondet> -- use it and comment why. If it uses
