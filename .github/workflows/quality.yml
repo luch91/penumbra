@@ -46,7 +46,7 @@ jobs:
   live-studionet:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.live_suite == true }}
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 360
     env:
       ACCOUNT_PRIVATE_KEY_1: "0x0000000000000000000000000000000000000000000000000000000000000001"
     steps:
