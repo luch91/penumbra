@@ -7,6 +7,85 @@ Updated every session; newest entries at the top.
 
 ---
 
+## 2026-09-09 -- Focused Studionet rerun confirms DNS contamination
+
+**Verification.** `gltest --network studionet --junitxml=artifacts/studionet-focused.xml tests/test_consensus_thermometer.py`
+collected 6 tests and finished in 10:55 with **4 passed and 2 failed**. Both
+failures occurred during deployment/nonce or receipt RPC work and ended with
+`socket.gaierror: [Errno 11002] getaddrinfo failed` for `studio.genlayer.com`;
+neither reached a contract assertion. The report was generated during the run;
+the subsequent repository-only pytest invocation cleared the shared artifacts
+directory as part of gltest setup.
+
+**Conclusion.** The focused evidence still points to intermittent hosted DNS
+or transport instability, not a source-level ConsensusThermometer regression.
+No contract changes are warranted until a transport-clean Studionet run
+produces an assertion failure.
+
+## 2026-09-09 -- Complete 160-test rerun finished under the 60-second throttle
+
+**Verification.** The full command
+`gltest --network studionet tests` ran to completion with the throttled
+configuration (`default_wait_interval: 60000`, `default_wait_retries: 25`).
+It collected all 160 tests and finished in 2:33:40 with **68 passed and 92
+failed**.
+
+The failures were dominated by hosted-RPC transport errors, especially
+`socket.gaierror: [Errno 11002] getaddrinfo failed` for
+`studio.genlayer.com`, wrapped by `genlayer_py` as `GenLayerError` or
+`gltest` deployment errors. The traceback shows these failures occurring while
+fetching nonces, transaction receipts, or deployments, before contract
+assertions could run. The two earlier canary failures and the later catalog
+failures are therefore not evidence of a common source regression. The
+deterministic agent tests remained passing separately.
+
+**Conclusion.** The requested complete rerun is complete, but it is not a
+green baseline. The 60-second throttle reduced request pressure but cannot
+prevent DNS outages or connection failures in the hosted Studionet endpoint.
+Keep the run recorded as an infrastructure-contaminated result and do not
+claim the current revision passed all 160 tests.
+
+## 2026-09-09 -- 60-second Studionet throttle did not remove the transport stall
+
+**Verification.** The complete rerun used `default_wait_interval: 60000` and
+`default_wait_retries: 25`, collected all 160 tests, and reached 19 passing
+tests in 41:17. It then stalled in
+`tests/test_canary_tripwire.py::test_cannot_rearm_after_tripped` while
+submitting `c.poll()`. The captured traceback is below contract execution:
+`genlayer_py` was fetching the sender nonce through `requests`/`urllib3`, and
+the interruption occurred in SSL certificate setup (`load_verify_locations`).
+There was no contract assertion failure and no completed pytest result.
+
+**Conclusion.** Increasing the receipt/finality polling interval did not
+remove this failure mode. It is a client transport/SSL stall on the hosted
+Studionet RPC, not evidence that the 60-second throttle or the contract logic
+is incorrect. Keep the throttle in place, but investigate the Python
+HTTP/TLS path or hosted RPC availability before another full-suite attempt.
+
+## 2026-09-09 -- Fresh 160-test Studionet verification reached a cross-contract callback stall
+
+**Verification.** The current checkout collected 160 tests. The full
+`gltest --network studionet tests` run completed 18 tests successfully before
+the first `CanaryTripwire` transaction remained in the Studionet transaction
+layer for an extended interval and was interrupted after 1,854 seconds. The
+same suite was then isolated: 5 of 7 tests passed in 606 seconds, with the
+remaining stall occurring in the live cross-contract callback path rather
+than in a Python assertion. The first isolated deployment test also passed
+independently in 53.71 seconds.
+
+Compilation and the deterministic agent/monitor suite remained clean: Python
+3.12 compilation passed and 10 focused tests passed. No source or test files
+were changed as a result of this run, and the working tree remained clean.
+
+**How to apply.** Do not describe the current 160-test revision as having a
+green full-suite baseline. Treat the callback transaction stall as a current
+Studionet availability/finality issue unless a future run produces a source
+assertion failure. Retry the focused `CanaryTripwire` suite and then the full
+catalog when the cross-contract write endpoint is responsive. Preserve the
+existing callback implementation and its asynchronous-delivery test; removing
+that coverage would hide the exact surface this primitive is intended to
+verify.
+
 ## 2026-08-28 -- Full Studionet catalog suite passed
 
 **Verification.** The complete `gltest --network studionet tests` run collected
