@@ -10,7 +10,9 @@ Paste the batch prompt below into Claude Code from the repo root. A reusable sin
 Read README.md, CONTRACTS.md, and DECISIONS.md in full before writing anything.
 reading: it documents ten bugs that passed py_compile cleanly and only broke
 on a live deploy. Do not reproduce them.
-Then read the existing catalog contracts and PenumbraGate as the style and correctness reference:
+Then read the existing catalog contracts as the style and correctness reference.
+PenumbraGate is a separate downstream project at
+https://github.com/luch91/penumbra-gate; do not assume its files are in this repository:
 contracts/dissensus_oracle.py, contracts/jailbreak_bounty.py,
 contracts/proof_carrying_answer.py, contracts/schelling_resolver.py,
 contracts/semantic_deadman.py, contracts/mirror_audit.py. Match their

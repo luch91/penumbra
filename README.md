@@ -72,61 +72,18 @@ The catalog below covers all 20 contracts. Each contract has its own source file
 - [Consensus helper reference](https://github.com/luch91/penumbra/blob/main/lib/penumbra_consensus.py)
 - [Finalized SemanticDeadman deployment](https://explorer-studio.genlayer.com/tx/0x8669e0db1a0295e216733027446ec949082636553ba958ee68a8f09a8cf4f1a2)
 
-### PenumbraGate deployment
+### Separate project: PenumbraGate
 
-PenumbraGate is the catalog contribution review primitive. Its finalized
-Studionet deployment uses the pinned runner, the full NN-1 through NN-8 rubric,
-non-comparative consensus for both rubric parts, one free submission per address,
-mandatory stake thereafter, and pull-payment refunds.
-
-- [PenumbraGate source](https://github.com/luch91/penumbra/blob/main/contracts/penumbra_gate.py)
-- [PenumbraGate contract](https://explorer-studio.genlayer.com/address/0x121b3e63a721ABd30dd87bB5675ece1B7Ea6d1F7)
-- PenumbraGate deployment through [GenShipyard](https://genshipyard.com/): [0x3acd153a303610642bcc7fd05b59515efdf147095abc0489adbbe5ec1081bb5f](https://explorer-studio.genlayer.com/tx/0x3acd153a303610642bcc7fd05b59515efdf147095abc0489adbbe5ec1081bb5f)
-- Deployment wallet: `0x7048781a2Fc941617995f8c4542A1908500C0703`
-- Free submission through [GenShipyard](https://genshipyard.com/): [0xcc582c556c0441f2642635179fee96c93dadbda0de1d90c981016a1c6f380612](https://explorer-studio.genlayer.com/tx/0xcc582c556c0441f2642635179fee96c93dadbda0de1d90c981016a1c6f380612)
-- Staked submission through [GenShipyard](https://genshipyard.com/), with 0.2 GEN: [0xaf58a41b4a707b0357cdead849b6a1e41d9003bb584e2e44bc7902ab755a9057](https://explorer-studio.genlayer.com/tx/0xaf58a41b4a707b0357cdead849b6a1e41d9003bb584e2e44bc7902ab755a9057)
-- Full refund withdrawal through [GenShipyard](https://genshipyard.com/): [0x571ce0683f12dccd6ae2af383c5980bfbc2b4897dcf86c338e924910ae4d1556](https://explorer-studio.genlayer.com/tx/0x571ce0683f12dccd6ae2af383c5980bfbc2b4897dcf86c338e924910ae4d1556)
-- Final state evidence: submission count `2`; claimable balance `0` after withdrawal.
-- [PenumbraGate tests](https://github.com/luch91/penumbra/blob/main/tests/test_penumbra_gate.py)
-- [PenumbraGate agent](https://github.com/luch91/penumbra/blob/main/agent/review_agent.py)
-
-### PenumbraGate agent workflow
-
-The agent is the off-chain coordinator around the on-chain review contract.
-It does not make the verdict and it never merges a contribution.
-
-1. It runs the deterministic pre-filter: syntax, ASCII, pinned runner hash,
-   storage and return-type checks, structural completeness, real-transfer
-   checks, and external URL scope checks.
-2. For submissions that pass, it sends the source and summary as delimited
-   data to `PenumbraGate.submit`. It does not mix submitted text with its own
-   instructions.
-3. It waits for `FINALIZED`, not merely `ACCEPTED`, then reads the verdict and
-   reason from the contract and reports them to the contributor.
-4. It inspects the final receipt for a native appeal. When an appeal is
-   recorded, it calls `mark_appealed` so the public submission record reflects
-   that history.
-5. It recommends acceptance or rejection to the repository owner. The owner
-   makes the final merge decision.
-
-The implementation is in [`agent/review_agent.py`](https://github.com/luch91/penumbra/blob/main/agent/review_agent.py), with focused coverage in
-[`tests/test_penumbra_gate_agent.py`](https://github.com/luch91/penumbra/blob/main/tests/test_penumbra_gate_agent.py).
-
-### Operational hardening
-
-The repository includes a GitHub PR reporting adapter and a finalized
-transaction monitor. The adapter reports the on-chain recommendation but has
-no merge capability. The monitor waits for finality and records native appeals
-when the finalized receipt shows a later validator round.
-
-The GitHub Actions quality workflow runs compilation, the pure-ASCII scan, and
-agent tests on every pull request and push to `main`. The last recorded
-155-test Studionet suite is available through manual workflow dispatch because it uses
-live consensus and normally takes more than an hour.
+PenumbraGate is maintained in its own repository: [luch91/penumbra-gate](https://github.com/luch91/penumbra-gate).
+Its contract, off-chain agent, tests, deployment evidence, and operational
+documentation were split from this catalog while preserving Git history. The
+existing Studionet deployment remains at
+[0x121b3e63a721ABd30dd87bB5675ece1B7Ea6d1F7](https://explorer-studio.genlayer.com/address/0x121b3e63a721ABd30dd87bB5675ece1B7Ea6d1F7);
+the repository move does not change deployed code or state.
 
 ## The catalog -- 20 primitives in 8 families
 
-Status legend: [x] source and integration tests present; all 20 catalogue contracts have deployment records and focused live SDK evidence in `CONTRACTS.md`. A 155-test Studionet suite passed on 2026-08-28; the current checkout collects 160 tests, so the expanded suite still needs a fresh live run.
+Status legend: [x] source and integration tests present; all 20 catalogue contracts have deployment records and focused live SDK evidence in `CONTRACTS.md`. PenumbraGate tests now run in its separate repository. The latest pre-split 160-test Studionet run had 68 passes and 92 DNS/RPC-contaminated failures; see `DECISIONS.md` before treating that run as a source baseline.
 
 ### I - Oracles of Doubt -- *disagreement as signal*
 1. [x] **DissensusOracle** -- answers a contested question *and* publishes a `dissensus` score by self-ensembling K expert opinions; the comparative principle forces validators to agree on both the verdict and how hard the question was. Downstream contracts gate on it. -> `contracts/dissensus_oracle.py`
